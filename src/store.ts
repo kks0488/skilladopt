@@ -217,7 +217,7 @@ export interface ApplyOptions {
   force: boolean;
   private: boolean;
   /** Test hook: throw after this step to exercise rollback. */
-  failAfter?: "staged" | "swapped" | "records";
+  failAfter?: "staged" | "swapped" | "records" | "kill-after-staged";
 }
 
 export function applyFiles(job: Job, files: Record<string, string>, opts: ApplyOptions): "applied" | "unchanged" {
@@ -257,6 +257,8 @@ export function applyFiles(job: Job, files: Record<string, string>, opts: ApplyO
     for (const item of RECORD_ITEMS(name)) assertSafePath(root, `.skilladopt/${item}`);
     const plannedPrivate = [
       ...job.targets.flatMap((t) => Object.keys(files).map((p) => `${t}/${p}`)),
+      // Staging copies must be ignored too: a hard kill can leave them behind until `recover`.
+      ...job.targets.flatMap((t) => Object.keys(files).map((p) => `${t}.skilladopt-new/${p}`)),
       ...job.files.map((f) => `.skilladopt/upstream/${name}/${f.path}`),
       ...Object.keys(files).map((p) => `.skilladopt/approved/${name}/${p}`),
       `.skilladopt/decisions/${name}.json`,
@@ -264,12 +266,7 @@ export function applyFiles(job: Job, files: Record<string, string>, opts: ApplyO
     if (opts.private) {
       // Exclude first, then ask git whether it really ignores every file we are about to write;
       // .gitignore negations can win over .git/info/exclude.
-      const planned = [
-        ...job.targets.flatMap((t) => Object.keys(files).map((p) => `${t}/${p}`)),
-        ...job.files.map((f) => `.skilladopt/upstream/${name}/${f.path}`),
-        ...Object.keys(files).map((p) => `.skilladopt/approved/${name}/${p}`),
-        `.skilladopt/decisions/${name}.json`,
-      ];
+      const planned = plannedPrivate;
       assertNotTracked(root, privatePaths(job));
       excludeFromGit(root, privatePaths(job));
       assertIgnored(root, planned);
@@ -297,6 +294,7 @@ export function applyFiles(job: Job, files: Record<string, string>, opts: ApplyO
       }
     }
     if (opts.failAfter === "staged") throw new Error("injected failure after staging");
+    if (opts.failAfter === "kill-after-staged") process.kill(process.pid, "SIGKILL"); // test hook: no cleanup at all
     for (const t of job.targets) {
       const target = assertSafePath(root, t);
       if (existsSync(target)) renameSync(target, `${target}.skilladopt-old`);
@@ -369,7 +367,7 @@ function writeRecords(job: Job, files: Record<string, string>, outputHashes: Rec
 /** Everything that contains the adopted text: installs, snapshots and the decision record. */
 function privatePaths(job: Job): string[] {
   const n = job.skill.name;
-  return [...job.targets.map((t) => `${t}/`), `.skilladopt/upstream/${n}/`, `.skilladopt/approved/${n}/`, `.skilladopt/decisions/${n}.json`];
+  return [...job.targets.flatMap((t) => [`${t}/`, `${t}.skilladopt-new/`, `${t}.skilladopt-old/`]), `.skilladopt/upstream/${n}/`, `.skilladopt/approved/${n}/`, `.skilladopt/decisions/${n}.json`];
 }
 
 function git(root: string, args: string[]): { ok: boolean; out: string } {

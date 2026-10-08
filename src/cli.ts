@@ -381,7 +381,7 @@ function doApply(job: Job, opts: Opts, root: string): number {
   if (!licenseAllowsCommit(job) && !opts.private) {
     throw new UserError(`License is ${job.license?.spdx ?? "missing"}; skilladopt only commits adapted copies of permissively licensed skills. Use --private to install it outside git.`);
   }
-  const failAfter = process.env.SKILLADOPT_TEST_FAIL_AFTER as "staged" | "swapped" | "records" | undefined; // test hook
+  const failAfter = process.env.SKILLADOPT_TEST_FAIL_AFTER as "staged" | "swapped" | "records" | "kill-after-staged" | undefined; // test hook
   const result = applyFiles(job, files, { force: opts.force, private: opts.private || !licenseAllowsCommit(job), failAfter });
   job.state = "applied";
   saveJob(job);

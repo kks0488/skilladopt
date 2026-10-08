@@ -121,8 +121,15 @@ function codeSpans(text: string): string[] {
  */
 export function projectReference(span: string, project: Project): string | null {
   if (/[;&|`$<>(){}\\]|\.\./.test(span)) return null;
-  const m = /^(npm|pnpm|yarn|bun)\s+(?:run\s+)?([\w:.@/-]+)((?:\s+--?[\w:.=-]+)*)$/.exec(span);
-  if (m) return project.scripts.has(m[2]!) ? `script:${m[2]}` : null;
+  // Only forms that are guaranteed to run a package.json script: `<pm> run <script>`, and the
+  // `test`/`start` shorthands of npm, pnpm and yarn. Built-ins such as `npm publish` or `npm install`
+  // never count, even if a script with the same name exists (bun's `bun test` is its own runner).
+  const m = /^(npm|pnpm|yarn|bun)\s+(run\s+)?([\w:.@/-]+)((?:\s+--?[\w:.=-]+)*)$/.exec(span);
+  if (m) {
+    const [, pm, run, script] = m as unknown as [string, string, string | undefined, string];
+    const shorthand = !run && pm !== "bun" && (script === "test" || script === "start");
+    return (run || shorthand) && project.scripts.has(script) ? `script:${script}` : null;
+  }
   if (/^[\w./-]+$/.test(span) && !span.startsWith("/") && span.length < 200 && existsSync(join(project.root, span))) return `file:${span}`;
   return null;
 }

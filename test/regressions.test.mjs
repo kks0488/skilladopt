@@ -468,3 +468,35 @@ test("R10: doctor does not count 'not attempted' or the word sandbox as a refusa
   assert.equal(r.code, 1, r.out);
   assert.match(r.out, /INCONCLUSIVE\s+read a file/);
 });
+
+// ---------------------------------------------------------------- review 5
+
+test("R11: package-manager built-ins never count as project scripts", () => {
+  const p = newProject("r11", { scripts: { test: "vitest run", publish: "echo local-check", "release-check": "echo ok" } });
+  const s = newSkill("r11", "---\nname: demo\ndescription: d\n---\n# Demo\n\nRun the release check.\n");
+  const d = keepAll(["b01", "b02"]);
+  d.blocks[1] = { id: "b02", action: "bind", reason: "tool-substitution", evidence: [], text: "Run `npm publish`.", note: "" };
+  let r = sa(p, ["add", s, "--decisions", dfile(d), "--yes"]);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /`npm publish` is not a command or file of this project/);
+  d.blocks[1] = { id: "b02", action: "bind", reason: "tool-substitution", evidence: [], text: "Run `npm run release-check`.", note: "" };
+  r = sa(p, ["add", s, "--decisions", dfile(d)]);
+  assert.equal(r.code, 0, r.out);
+});
+
+test("R12: a hard kill during a private install leaves nothing git would pick up", () => {
+  const p = newProject("r12");
+  const s = join(base, "skill-r12");
+  write(join(s, "SKILL.md"), SIMPLE);
+  sa(p, ["add", s, "--target", "codex", "--decisions", dfile(keepAll(["b01", "b02"]))]);
+  const killed = spawnSync(process.execPath, [CLI, "apply", "last", "--private"], {
+    cwd: p, encoding: "utf8", env: { ...process.env, SKILLADOPT_HOME: home, NO_COLOR: "1", CLAUDECODE: "", SKILLADOPT_TEST_FAIL_AFTER: "kill-after-staged" },
+  });
+  assert.equal(killed.signal, "SIGKILL");
+  assert.ok(existsSync(join(p, ".agents/skills/demo.skilladopt-new/SKILL.md")), "staging copy left behind by the kill");
+  const untracked = spawnSync("git", ["ls-files", "--others", "--exclude-standard"], { cwd: p, encoding: "utf8" }).stdout;
+  assert.doesNotMatch(untracked, /skilladopt-new|SKILL\.md|NOTICE\.md/);
+  const r = sa(p, ["recover"]);
+  assert.match(r.out, /rolled back/);
+  assert.ok(!existsSync(join(p, ".agents/skills/demo.skilladopt-new")));
+});

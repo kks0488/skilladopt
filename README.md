@@ -107,7 +107,7 @@ There is also an agent skill in [`skill/skilladopt`](skill/skilladopt/SKILL.md).
 ## Safety model (and its limits)
 
 - **Fetched content is data.** Nothing from the skill is executed. Files are read through the GitHub API at a pinned commit, not unpacked from archives.
-- **Refused before any AI sees it:** hidden/bidirectional Unicode, control characters, symlinks, path traversal, skills that need scripts or files outside their folder.
+- **Refused before any AI sees it:** hidden/bidirectional Unicode, control characters, symlinks, path traversal, skills that need scripts, or files outside their folder that are not shared Markdown docs from the same repository.
 - **The worker is isolated.** It only gets the skill text and a summary of your project (dependency names, npm scripts, `AGENTS.md` lines) in its prompt.
   - `claude`: `--safe-mode` (no CLAUDE.md, skills, plugins, hooks or MCP), no tools.
   - `codex`: read-only sandbox, network disabled for its tools, no access to your home directory.
@@ -133,12 +133,12 @@ Transaction state (journal, backups, lock) lives in `~/.cache/skilladopt`, never
 
 ## Limits (v0.1)
 
-- Markdown-only skills. Skills with scripts, or referencing files outside their folder, are refused.
+- Markdown-only skills. Skills that need scripts are refused. Shared Markdown docs a skill links to outside its folder are bundled (same repository only, one level deep, never other skills); anything else outside the folder is refused.
 - The Markdown splitter is line-based, not a full parser.
 - Only the first 400 non-empty lines of your instruction files are shown to the worker (you get a note when that happens).
 - `doctor` is a probe on your machine, not a proof of isolation; network access is reported by the worker, not verified.
 - Evidence is about what the code can see: dependencies, npm/python manifests, files, `AGENTS.md`/`CLAUDE.md` lines. A decision with no evidence cannot be invalidated by `impact`.
-- Tested with Codex CLI 0.161 and Claude Code 2.1 on macOS.
+- Tested with Codex CLI 0.161 and Claude Code 2.1 on macOS; the test suite runs on Linux with Node 20 and 24.
 
 ## Prior art
 

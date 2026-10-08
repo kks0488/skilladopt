@@ -92,6 +92,8 @@ ponytail  2 of 25 decisions need a re-check · 23 unaffected
 
 Not "re-read the whole skill": **these two paragraphs, and why.** `impact` runs offline and exits non-zero, so it works as a CI check.
 
+`impact` re-checks the decisions that recorded evidence (a script, a dependency, an `AGENTS.md` line). Paragraphs kept as general advice have no evidence and are not re-checked. "Unaffected" means "nothing they were based on changed", not "still perfect".
+
 ## Install
 
 Node 20+. The worker that reads the skill is whichever coding agent you already use: `codex` or `claude` on your `PATH`.
@@ -123,8 +125,8 @@ There is also an agent skill in [`skill/skilladopt`](skill/skilladopt/SKILL.md).
 .claude/skills/<name>/      the same for Claude Code       (--target codex|claude|both)
 .skilladopt/lock.json       source, pinned commit, hashes
 .skilladopt/decisions/      every decision and its evidence
-.skilladopt/upstream/       the original, for update/impact
-.skilladopt/approved/       what you approved, to detect hand edits
+.skilladopt/upstream/       the original as adopted (kept to restore and compare later)
+.skilladopt/approved/       exactly what you approved (kept to restore and compare later)
 ```
 
 Transaction state (journal, backups, lock) lives in `~/.cache/skilladopt`, never in the repository, so a repository cannot plant one.
@@ -133,6 +135,8 @@ Transaction state (journal, backups, lock) lives in `~/.cache/skilladopt`, never
 
 - Markdown-only skills. Skills with scripts, or referencing files outside their folder, are refused.
 - The Markdown splitter is line-based, not a full parser.
+- Only the first 400 non-empty lines of your instruction files are shown to the worker (you get a note when that happens).
+- `doctor` is a probe on your machine, not a proof of isolation; network access is reported by the worker, not verified.
 - Evidence is about what the code can see: dependencies, npm/python manifests, files, `AGENTS.md`/`CLAUDE.md` lines. A decision with no evidence cannot be invalidated by `impact`.
 - Tested with Codex CLI 0.161 and Claude Code 2.1 on macOS.
 

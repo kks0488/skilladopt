@@ -464,6 +464,9 @@ function printSource(src: FetchedSource, project: Project, warnings: string[]): 
   const files = src.files.map((f) => f.path).join(", ");
   log(`${c.dim("files   ")} ${safePrint(files)}`);
   for (const w of warnings) log(`${c.dim("note    ")} ${c.yellow(safePrint(w))}`);
+  if (project.agents.length > 400) {
+    log(`${c.dim("note    ")} ${c.yellow(`your instruction files have ${project.agents.length} non-empty lines; only the first 400 are shown to the worker, so later rules were not considered`)}`);
+  }
 }
 
 const ACTION_COLOR: Record<string, (s: string) => string> = { keep: c.dim, bind: c.cyan, rewrite: c.blue, drop: c.red, review: c.yellow };

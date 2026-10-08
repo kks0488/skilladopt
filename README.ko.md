@@ -84,6 +84,7 @@ ponytail  2 of 25 decisions need a re-check · 23 unaffected
 ```
 
 "스킬 전체를 다시 읽으세요"가 아니라 **"이 두 문단을, 이 이유로 다시 보세요"**입니다.
+`impact`는 근거(스크립트, 의존성, `AGENTS.md` 줄)가 기록된 판단만 다시 확인합니다. 일반 조언이라 근거 없이 유지한 문단은 확인 대상이 아닙니다. "영향 없음"은 "판단의 근거가 바뀌지 않았다"는 뜻이지 "여전히 완벽하다"는 뜻이 아닙니다.
 `impact`는 오프라인으로 돌고, 문제가 있으면 0이 아닌 종료 코드를 돌려줘서 CI 검사로 쓸 수 있습니다.
 
 ## 설치
@@ -117,8 +118,8 @@ npx skilladopt add <GitHub URL | owner/repo/경로 | ./로컬/폴더>
 .claude/skills/<이름>/      Claude Code용                 (--target codex|claude|both)
 .skilladopt/lock.json       출처, 고정 커밋, 해시
 .skilladopt/decisions/      모든 판단과 근거
-.skilladopt/upstream/       원본 (update/impact용)
-.skilladopt/approved/       승인한 내용 (손 편집 감지용)
+.skilladopt/upstream/       입양 당시 원본 (나중에 복원·비교용으로 보관)
+.skilladopt/approved/       승인한 그대로의 내용 (나중에 복원·비교용으로 보관)
 ```
 
 설치 중 복구 기록(journal, 백업, 잠금)은 저장소가 아니라 `~/.cache/skilladopt`에 둡니다. 그래서 저장소가 가짜 기록을 심을 수 없습니다.
@@ -127,6 +128,8 @@ npx skilladopt add <GitHub URL | owner/repo/경로 | ./로컬/폴더>
 
 - Markdown 스킬만 지원합니다. 스크립트가 있거나 폴더 밖 파일을 참조하는 스킬은 거부합니다.
 - Markdown 분할은 줄 단위이며, 완전한 파서가 아닙니다.
+- 지침 파일은 빈 줄을 뺀 앞 400줄만 작업자에게 전달됩니다(넘으면 알려줍니다).
+- `doctor`는 내 컴퓨터에서의 시험이지 격리의 증명이 아닙니다. 네트워크 차단은 작업자의 보고이며 검증하지 않습니다.
 - 근거는 코드가 볼 수 있는 것(의존성, npm·python 매니페스트, 파일, `AGENTS.md`/`CLAUDE.md` 줄)으로 한정됩니다. 근거가 없는 판단은 `impact`가 무효화를 알아낼 수 없습니다.
 - macOS에서 Codex CLI 0.161, Claude Code 2.1로 시험했습니다.
 

@@ -321,7 +321,7 @@ async function cmdUpdate(opts: Opts, root: string): Promise<number> {
       ...a,
       after: nb?.id ?? fallback.id,
       status: "review",
-      flags: [drift.length ? `evidence changed: ${drift.join("; ")}` : "the paragraph it follows changed upstream"],
+      flags: [drift.length ? `evidence changed: ${drift.join("; ")}` : newRules ? "instruction lines changed since adoption: check it again" : "the paragraph it follows changed upstream"],
     });
   }
   log(c.dim(`reuse    ${carried.length} of ${blocks.length} decisions carried (block, section and evidence unchanged) · ${job.open.length} to decide again`));

@@ -75,6 +75,8 @@ export function applyWorkerOutput(job: Job, raw: RawDecisions, project: Project)
     const anchor = byId.get(add.after);
     if (!anchor) { errors.push(`addition ${add.id} anchors to unknown block ${add.after}`); return; }
     if (!add.text) return;
+    const same = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
+    if (additions.some((x) => same(x.text) === same(add.text))) return; // already carried from the earlier adoption
     if (!add.evidence.some((e) => e.state === "present")) add.flags.push("no supporting evidence");
     for (const f of scanOutput(add.text, "")) add.flags.push(`${f.level === "reject" ? "UNSAFE" : "check"}: ${f.message}`);
     if (add.flags.some((f) => f.startsWith("UNSAFE"))) add.status = "dropped";

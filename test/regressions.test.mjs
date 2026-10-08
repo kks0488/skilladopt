@@ -532,3 +532,18 @@ test("new instruction lines after adoption are reported, and update re-decides e
   assert.match(r.out, /every paragraph is decided again/);
   assert.match(r.out, /2 block\(s\) to decide/);
 });
+
+test("an addition the worker proposes again is not duplicated on update", () => {
+  const p = newProject("dedupe");
+  const s = newSkill("dedupe", "---\nname: demo\ndescription: d\n---\n# Demo\n\nKeep it small.\n");
+  const d = keepAll(["b01", "b02"]);
+  d.additions = [{ after: "b02", text: "Ask before adding dependencies.", evidence: ["agents:AGENTS.md:3"], note: "" }];
+  sa(p, ["add", s, "--decisions", dfile(d)]);
+  sa(p, ["review", "last", "--decide", "a1=accept"]);
+  let r = sa(p, ["apply", "last"]);
+  assert.equal(r.code, 0, r.out);
+  write(join(p, "AGENTS.md"), "# Rules\n\nAsk before adding dependencies.\nNever delete files.\n");
+  r = sa(p, ["update", "demo", "--decisions", dfile({ ...d, skill: { name: "demo", description: "d" } })]);
+  assert.equal((r.out.match(/Ask before adding dependencies/g) ?? []).length, 1, r.out);
+  assert.match(r.out, /instruction lines changed since adoption: check it again/);
+});

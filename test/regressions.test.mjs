@@ -500,3 +500,19 @@ test("R12: a hard kill during a private install leaves nothing git would pick up
   assert.match(r.out, /rolled back/);
   assert.ok(!existsSync(join(p, ".agents/skills/demo.skilladopt-new")));
 });
+
+test("R13: the previous install's temporary -old copy is verified as ignored before the swap", () => {
+  const p = newProject("r13");
+  const s = join(base, "skill-r13");
+  write(join(s, "SKILL.md"), SIMPLE);
+  sa(p, ["add", s, "--target", "codex", "--decisions", dfile(keepAll(["b01", "b02"]))]);
+  let r = sa(p, ["apply", "last", "--private"]);
+  assert.equal(r.code, 0, r.out);
+  write(join(p, ".gitignore"), "!.agents/skills/demo.skilladopt-old/\n");
+  write(join(s, "SKILL.md"), SIMPLE + "\nMore.\n");
+  sa(p, ["update", "demo", "--decisions", dfile(keepAll(["b03"]))]);
+  r = sa(p, ["apply", "last", "--private"]);
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /git would not ignore .*skilladopt-old/);
+  assert.ok(!existsSync(join(p, ".agents/skills/demo.skilladopt-old")));
+});

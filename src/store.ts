@@ -259,6 +259,8 @@ export function applyFiles(job: Job, files: Record<string, string>, opts: ApplyO
       ...job.targets.flatMap((t) => Object.keys(files).map((p) => `${t}/${p}`)),
       // Staging copies must be ignored too: a hard kill can leave them behind until `recover`.
       ...job.targets.flatMap((t) => Object.keys(files).map((p) => `${t}.skilladopt-new/${p}`)),
+      // ...and so must the previous install while it sits at .skilladopt-old during the swap.
+      ...job.targets.flatMap((t) => Object.keys(hashDir(join(root, t))).map((p) => `${t}.skilladopt-old/${p}`)),
       ...job.files.map((f) => `.skilladopt/upstream/${name}/${f.path}`),
       ...Object.keys(files).map((p) => `.skilladopt/approved/${name}/${p}`),
       `.skilladopt/decisions/${name}.json`,

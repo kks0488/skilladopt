@@ -92,7 +92,7 @@ ponytail  2 of 25 decisions need a re-check · 23 unaffected
 
 Not "re-read the whole skill": **these two paragraphs, and why.** `impact` runs offline and exits non-zero, so it works as a CI check.
 
-`impact` re-checks the decisions that recorded evidence (a script, a dependency, an `AGENTS.md` line). Paragraphs kept as general advice have no evidence and are not re-checked. "Unaffected" means "nothing they were based on changed", not "still perfect".
+`impact` re-checks the decisions that recorded evidence (a script, a dependency, an `AGENTS.md` line). Paragraphs kept as general advice have no evidence and are not re-checked. "Unaffected" means "nothing they were based on changed", not "still perfect". When a new line appears in your instruction files, `impact` lists it, and `update` then decides every paragraph again.
 
 ## Install
 

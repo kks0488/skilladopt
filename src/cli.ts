@@ -107,9 +107,9 @@ const log = (s = "") => process.stdout.write(s + "\n");
 async function fetchSource(meta: string | SourceMeta, ref?: string): Promise<FetchedSource> {
   if (typeof meta === "string") {
     const spec = parseSource(meta);
-    return spec.type === "local" ? fetchLocal(spec.dir) : fetchGithub(spec);
+    return spec.type === "local" ? await fetchLocal(spec.dir) : fetchGithub(spec);
   }
-  if (meta.type === "local") return fetchLocal(meta.dir!);
+  if (meta.type === "local") return await fetchLocal(meta.dir!);
   return fetchGithub({ type: "github", owner: meta.owner!, repo: meta.repo!, path: meta.path ?? "", ref: ref ?? meta.ref });
 }
 
@@ -132,7 +132,9 @@ function inspect(src: FetchedSource): { blocks: ReturnType<typeof blocksOf>; pro
     for (const ref of localReferences(f.content)) {
       const resolved = posix.normalize(posix.join(posix.dirname(f.path), ref));
       if (resolved.startsWith("../") || resolved === "..") {
-        problems.push(`${f.path} references ${ref}, outside the skill folder (not supported yet)`);
+        if (/(^|\/)SKILL\.md$/i.test(ref)) warnings.push(`${f.path} links to another skill (${ref}); adopt it separately if you need it`);
+        else if (f.path.startsWith("bundled/")) warnings.push(`${f.path} mentions ${ref}; bundled docs are not followed further`);
+        else problems.push(`${f.path} references ${ref}, outside the skill folder and not a Markdown file in the same repository`);
       } else if (src.excluded.includes(resolved)) {
         problems.push(`${f.path} needs ${resolved}, a script/asset file (skills with code are not supported yet)`);
       } else if (!texts.has(resolved) && !/^https?:/.test(ref)) {

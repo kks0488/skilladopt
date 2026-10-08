@@ -348,13 +348,13 @@ test("I5: private mode excludes the decision record too and refuses tracked file
   assert.match(r.out, /cannot hide files git already tracks/);
 });
 
-test("I6: only a top-level LICENSE speaks for the skill; a weak match is not MIT", () => {
+test("I6: only a top-level LICENSE speaks for the skill; a weak match is not MIT", async () => {
   const dir = join(base, "skill-i6");
   write(join(dir, "SKILL.md"), SIMPLE);
   write(join(dir, "references/LICENSE"), MIT);
-  assert.equal(fetchLocal(dir).license, null);
+  assert.equal((await fetchLocal(dir)).license, null);
   write(join(dir, "LICENSE"), "Permission is hereby granted, free of charge, to anyone. Just kidding, all rights reserved.");
-  assert.equal(fetchLocal(dir).license.spdx, "UNKNOWN");
+  assert.equal((await fetchLocal(dir)).license.spdx, "UNKNOWN");
 });
 
 // ---------------------------------------------------------------- review 3
@@ -546,4 +546,35 @@ test("an addition the worker proposes again is not duplicated on update", () => 
   r = sa(p, ["update", "demo", "--decisions", dfile({ ...d, skill: { name: "demo", description: "d" } })]);
   assert.equal((r.out.match(/Ask before adding dependencies/g) ?? []).length, 1, r.out);
   assert.match(r.out, /instruction lines changed since adoption: check it again/);
+});
+
+test("shared docs linked from outside the skill folder are bundled only within a git repository", () => {
+  const p = newProject("bundle");
+  const repo = join(base, "plugin-repo");
+  spawnSync("git", ["init", "-q", repo]);
+  write(join(repo, "LICENSE"), MIT);
+  write(join(repo, "references/checklist.md"), "# Checklist\n\nTry every control twice.\n");
+  write(join(repo, "skills/other/SKILL.md"), "---\nname: other\ndescription: o\n---\n# Other\n\nSee `../../references/deeper.md`.\n");
+  write(join(repo, "skills/play/SKILL.md"), "---\nname: play\ndescription: p\n---\n# Play\n\nFollow `../../references/checklist.md` and `../other/SKILL.md`.\n");
+  let r = sa(p, ["add", join(repo, "skills/play"), "--worker", "manual"]);
+  assert.doesNotMatch(r.out, /REJECTED/, r.out);
+  assert.match(r.out, /bundled\/references\/checklist\.md/);
+  assert.match(r.out, /links to another skill \(\.\.\/other\/SKILL\.md\)/);
+  assert.doesNotMatch(r.out, /bundled\/skills\/other/);
+  assert.match(r.out, /· MIT/, "repository-root license is used");
+  // The rewritten link points inside the skill folder.
+  const brief = readFileSync(r.out.match(/(\/\S+brief\.md)/)[1], "utf8");
+  assert.match(brief, /bundled\/references\/checklist\.md/);
+  assert.doesNotMatch(brief, /`\.\.\/\.\.\/references\/checklist\.md`/);
+  // A non-Markdown file outside the folder is still refused.
+  write(join(repo, "skills/bad/SKILL.md"), "---\nname: bad\ndescription: b\n---\n# Bad\n\nRun `../../tools/setup.sh`.\n");
+  write(join(repo, "tools/setup.sh"), "echo hi\n");
+  r = sa(p, ["add", join(repo, "skills/bad"), "--worker", "manual"]);
+  assert.match(r.out, /REJECTED/);
+  // Without a git repository there is no boundary, so nothing outside the folder is read.
+  const loose = join(base, "loose");
+  write(join(loose, "references/checklist.md"), "# Private\n");
+  write(join(loose, "skills/play/SKILL.md"), "---\nname: play\ndescription: p\n---\n# Play\n\nFollow `../../references/checklist.md`.\n");
+  r = sa(p, ["add", join(loose, "skills/play"), "--worker", "manual"]);
+  assert.match(r.out, /REJECTED/);
 });

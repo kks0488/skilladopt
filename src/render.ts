@@ -78,6 +78,7 @@ function notice(job: Job): string {
     `- Original: ${job.source.url ?? job.source.id}`,
     `- Original commit: ${job.source.commit ?? "n/a"}`,
     `- License: ${job.license?.spdx ?? "not found"}`,
+    ...(job.source.bundled?.length ? ["- Shared docs bundled from the same repository (links rewritten to `bundled/`):", ...job.source.bundled.map((p) => `  - ${p}`)] : []),
   ];
   if (job.license?.text) {
     lines.push("", "## Original license", "", fence(job.license.text.trim()));

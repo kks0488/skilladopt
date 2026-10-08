@@ -1,7 +1,7 @@
 import { lstatSync, readdirSync, readFileSync, existsSync } from "node:fs";
-import { join, resolve, relative } from "node:path";
+import { dirname, join, posix, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
-import { checkEntries, classifyFile, LIMITS, scanInput, type FileEntry, type Finding } from "./scan.js";
+import { checkEntries, classifyFile, LIMITS, localReferences, scanInput, type FileEntry, type Finding } from "./scan.js";
 import { UserError, sha256 } from "./util.js";
 
 export type SourceSpec =
@@ -18,6 +18,8 @@ export interface SourceMeta {
   commit?: string;
   url?: string;
   dir?: string;
+  /** Repository paths of shared docs bundled into the skill because it links to them (see bundleReferences). */
+  bundled?: string[];
 }
 
 export interface FetchedSource {
@@ -142,13 +144,24 @@ export async function fetchGithub(src: Extract<SourceSpec, { type: "github" }>):
 
   // License: the skill folder's own top-level LICENSE first, else the repository root's,
   // both read from the same pinned commit as the skill itself.
+  const bundled = await bundleReferences(files, base, async (repoPath) => {
+    const e = all.find((x) => x.path === repoPath && x.type === "blob" && x.mode !== "120000" && (x.size ?? 0) <= LIMITS.fileBytes);
+    if (!e) return null;
+    const blob = await gh(`/repos/${src.owner}/${src.repo}/git/blobs/${e.sha}`);
+    return Buffer.from(String(blob.content), "base64").toString("utf8");
+  });
+
   let license = detectLicenseFromFiles(files);
   if (!license) {
-    const rootLicense = all.find((e) => e.type === "blob" && !e.path.includes("/") && LICENSE_FILE.test(e.path) && (e.size ?? 0) <= LIMITS.fileBytes);
-    if (rootLicense) {
-      const blob = await gh(`${repoPath}/git/blobs/${rootLicense.sha}`);
-      const text = Buffer.from(String(blob.content), "base64").toString("utf8");
-      license = licenseFrom(text, rootLicense.path);
+    // Nearest LICENSE from the skill folder up to the repository root (plugins often carry their own).
+    for (let dir = posix.dirname(base || "."); !license; dir = posix.dirname(dir)) {
+      const at = dir === "." ? "" : `${dir}/`;
+      const lic = all.find((e) => e.type === "blob" && e.mode !== "120000" && e.path.startsWith(at) && !e.path.slice(at.length).includes("/") && LICENSE_FILE.test(e.path.slice(at.length)) && (e.size ?? 0) <= LIMITS.fileBytes);
+      if (lic) {
+        const blob = await gh(`${repoPath}/git/blobs/${lic.sha}`);
+        license = licenseFrom(Buffer.from(String(blob.content), "base64").toString("utf8"), lic.path);
+      }
+      if (dir === ".") break;
     }
   }
   const meta: SourceMeta = {
@@ -160,6 +173,7 @@ export async function fetchGithub(src: Extract<SourceSpec, { type: "github" }>):
     ref,
     commit,
     url: `https://github.com/${src.owner}/${src.repo}/tree/${commit}${base ? `/${base}` : ""}`,
+    ...(bundled.length ? { bundled } : {}),
   };
   return { meta, files, excluded, license, findings };
 }
@@ -174,7 +188,7 @@ export async function latestCommit(meta: SourceMeta): Promise<string | null> {
 
 // ---------------------------------------------------------------- local
 
-export function fetchLocal(dir: string): FetchedSource {
+export async function fetchLocal(dir: string): Promise<FetchedSource> {
   if (!existsSync(join(dir, "SKILL.md"))) throw new UserError(`No SKILL.md in ${dir}`);
   const entries: FileEntry[] = [];
   const walk = (d: string) => {
@@ -200,14 +214,80 @@ export function fetchLocal(dir: string): FetchedSource {
     const content = readFileSync(join(dir, e.path), "utf8");
     files.push({ path: e.path, content, hash: sha256(content).slice(0, 16) });
   }
+  // Shared docs outside the folder are only bundled when a git repository bounds them.
+  const root = gitRoot(dir);
+  const bundled = root
+    ? await bundleReferences(files, relative(root, dir).split("\\").join("/"), async (repoPath) => {
+        const full = resolve(root, repoPath);
+        if (!full.startsWith(root + sep)) return null;
+        let cur = root;
+        for (const part of relative(root, full).split(sep)) {
+          cur = join(cur, part);
+          try { if (lstatSync(cur).isSymbolicLink()) return null; } catch { return null; }
+        }
+        return lstatSync(full).isFile() && lstatSync(full).size <= LIMITS.fileBytes ? readFileSync(full, "utf8") : null;
+      })
+    : [];
   const content = files.map((f) => `${f.path}\n${f.hash}`).join("\n");
   return {
-    meta: { type: "local", id: `local:${dir}`, dir, commit: `local-${sha256(content).slice(0, 12)}` },
+    meta: { type: "local", id: `local:${dir}`, dir, commit: `local-${sha256(content).slice(0, 12)}`, ...(bundled.length ? { bundled } : {}) },
     files,
     excluded,
-    license: detectLicenseFromFiles(files),
+    license: detectLicenseFromFiles(files) ?? (root ? nearestLicense(dirname(resolve(dir)), root) : null),
     findings,
   };
+}
+
+function nearestLicense(from: string, root: string): FetchedSource["license"] {
+  for (let d = from; d.startsWith(root); d = dirname(d)) {
+    for (const name of readdirSync(d)) {
+      const full = join(d, name);
+      if (LICENSE_FILE.test(name) && lstatSync(full).isFile() && lstatSync(full).size <= LIMITS.fileBytes) return licenseFrom(readFileSync(full, "utf8"), relative(root, full));
+    }
+    if (d === root) break;
+  }
+  return null;
+}
+
+function gitRoot(dir: string): string | null {
+  for (let d = resolve(dir), i = 0; i < 6; i++) {
+    if (existsSync(join(d, ".git"))) return d;
+    const up = dirname(d);
+    if (up === d) return null;
+    d = up;
+  }
+  return null;
+}
+
+/**
+ * Bundle shared Markdown docs that a skill links to outside its own folder (e.g. `../../references/x.md`),
+ * one level deep, from the same repository only. They are stored under `bundled/<repo path>` and the
+ * links in the skill are rewritten to point there. Anything else outside the folder stays a refusal.
+ */
+async function bundleReferences(files: FetchedSource["files"], base: string, read: (repoPath: string) => Promise<string | null>): Promise<string[]> {
+  const bundled: string[] = [];
+  for (const f of files.filter((x) => classifyFile(x.path) === "markdown")) {
+    let text = f.content;
+    const refs = localReferences(f.content).sort((a, b) => b.length - a.length);
+    for (const ref of refs) {
+      const dir = posix.dirname(f.path);
+      if (!posix.normalize(posix.join(dir, ref)).startsWith("../")) continue;
+      const repoPath = posix.normalize(posix.join(base, dir, ref));
+      if (repoPath.startsWith("../") || repoPath.startsWith("/") || !/\.md$/i.test(repoPath)) continue;
+      if (/(^|\/)SKILL\.md$/i.test(repoPath)) continue; // another skill: adopt it on its own
+      const to = `bundled/${repoPath}`;
+      if (!files.some((x) => x.path === to)) {
+        const content = await read(repoPath);
+        if (content === null) continue;
+        files.push({ path: to, content, hash: sha256(content).slice(0, 16) });
+        bundled.push(repoPath);
+      }
+      text = text.split(ref).join(posix.relative(dir, to));
+    }
+    if (text !== f.content) { f.content = text; f.hash = sha256(text).slice(0, 16); }
+  }
+  if (files.reduce((n, f) => n + Buffer.byteLength(f.content), 0) > LIMITS.totalBytes) throw new UserError("Skill plus bundled references exceed the size limit.");
+  return bundled;
 }
 
 function reject(findings: Finding[], meta: SourceMeta): FetchedSource {

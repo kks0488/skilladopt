@@ -245,7 +245,6 @@ async function cmdAdd(opts: Opts, root: string): Promise<number> {
   const spec = opts._[1];
   if (!spec) throw new UserError("Usage: skilladopt add <source>");
   const project = readProject(root);
-  log(c.bold(`skilladopt add ${safePrint(spec)}`));
   const src = await fetchSource(spec);
   const { blocks, problems, warnings } = inspect(src);
   printSource(src, project, warnings);
@@ -269,7 +268,6 @@ async function cmdUpdate(opts: Opts, root: string): Promise<number> {
   const rec = readDecisions(root, name);
   if (!entry || !rec) throw new UserError(`"${name}" is not adopted in this project.`);
   const project = readProject(root);
-  log(c.bold(`skilladopt update ${name}`));
   const src = await fetchSource(entry.source, opts.ref);
   const { blocks, problems, warnings } = inspect(src);
   printSource(src, project, warnings);

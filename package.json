@@ -1,0 +1,46 @@
+{
+  "name": "skilladopt",
+  "version": "0.1.0",
+  "description": "Don't install agent skills. Adopt them. Fit third-party SKILL.md files to your codebase, keep the evidence for every change, and know exactly what to re-check when your project or the upstream skill changes.",
+  "type": "module",
+  "bin": {
+    "skilladopt": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skill",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "agent-skills",
+    "skills",
+    "SKILL.md",
+    "claude-code",
+    "codex",
+    "ai-agents",
+    "coding-agents",
+    "cli"
+  ],
+  "author": "kks0488",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kks0488/skilladopt.git"
+  },
+  "homepage": "https://github.com/kks0488/skilladopt#readme",
+  "bugs": "https://github.com/kks0488/skilladopt/issues",
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "typescript": "5.9.3"
+  }
+}

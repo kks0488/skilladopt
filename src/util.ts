@@ -3,7 +3,7 @@ import { mkdirSync, renameSync, writeFileSync, readFileSync, existsSync } from "
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 
-export const VERSION = "0.1.9";
+export const VERSION = "0.1.10";
 
 export function sha256(s: string | Buffer): string {
   return createHash("sha256").update(s).digest("hex");

@@ -442,10 +442,8 @@ function cmdReview(opts: Opts, root: string): number {
       const [id, choice] = d.split("=");
       if (!id || !choice) throw new UserError(`--decide expects <id>=keep|drop|accept, got "${d}"`);
       if (id === "all") {
-        for (const x of job.decisions.filter((x) => x.action === "review")) {
-          const err = decide(job, x.blockId, choice, project);
-          if (err) log(c.yellow(`  ${x.blockId}: ${err}`));
-        }
+        const left = job.decisions.filter((x) => x.action === "review" && decide(job, x.blockId, choice, project)).map((x) => x.blockId);
+        if (left.length) log(c.yellow(`  ${left.length} item(s) have nothing to accept; decide them with keep or drop: ${left.join(", ")}`));
         for (const a of job.additions.filter((a) => a.status === "review")) decide(job, a.id, choice === "keep" ? "accept" : choice, project);
         continue;
       }

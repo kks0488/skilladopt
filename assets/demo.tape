@@ -1,5 +1,5 @@
-# README demo. Render from the repository root: vhs assets/demo.tape
-Output assets/demo.gif
+# README demo body. Build the final GIF (title card + this) with: sh assets/demo-render.sh
+Output assets/demo-body.mp4
 Require bash
 Require node
 Require git
@@ -10,7 +10,7 @@ Set Width 1400
 Set Height 820
 Set Padding 24
 Set Theme "Catppuccin Mocha"
-Set TypingSpeed 35ms
+Set TypingSpeed 18ms
 Set WindowBar Colorful
 
 Hide
@@ -21,21 +21,20 @@ Show
 
 Type "skilladopt add DietrichGebert/ponytail/.openclaw/skills/ponytail"
 Enter
-Wait+Screen@30s /worker/
-Sleep 2s
+Sleep 400ms
 Hide
 Wait+Screen@240s /next/
 Show
-Sleep 7s
+Sleep 4500ms
 
 Type "skilladopt review last --decide all=accept"
 Enter
 Wait+Screen@20s /apply/
-Sleep 1500ms
+Sleep 800ms
 Type "skilladopt apply last"
 Enter
 Wait+Screen@30s /adopted/
-Sleep 3s
+Sleep 1500ms
 
 Hide
 Type "teammate; clear"
@@ -46,8 +45,8 @@ Type "# A week later, a teammate changed the test script and added a rule:"
 Enter
 Type `grep '"test"' package.json; tail -1 AGENTS.md`
 Enter
-Sleep 4s
+Sleep 2s
 Type "skilladopt impact"
 Enter
 Wait+Screen@30s /need a look/
-Sleep 9s
+Sleep 7s

@@ -578,3 +578,12 @@ test("shared docs linked from outside the skill folder are bundled only within a
   r = sa(p, ["add", join(loose, "skills/play"), "--worker", "manual"]);
   assert.match(r.out, /REJECTED/);
 });
+
+test("a description padded past 1024 characters falls back to the original instead of failing", () => {
+  const p = newProject("longdesc");
+  const s = newSkill("longdesc", "---\nname: demo\ndescription: Short original.\n---\n# Demo\n\nKeep it small.\n");
+  const r = sa(p, ["add", s, "--decisions", dfile({ ...keepAll(["b01", "b02"]), skill: { name: "demo", description: "x".repeat(1100) } })]);
+  assert.doesNotMatch(r.out, /INVALID/, r.out);
+  assert.equal(sa(p, ["apply", "last"]).code, 0);
+  assert.match(readFileSync(join(p, ".agents/skills/demo/SKILL.md"), "utf8"), /description: "Short original\."/);
+});

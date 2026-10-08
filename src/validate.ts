@@ -84,7 +84,9 @@ export function applyWorkerOutput(job: Job, raw: RawDecisions, project: Project)
   });
 
   const name = String(raw.skill?.name ?? "").trim();
-  const description = String(raw.skill?.description ?? "").replace(/\s+/g, " ").trim();
+  const proposed = String(raw.skill?.description ?? "").replace(/\s+/g, " ").trim();
+  // A worker that pads the description past the limit should not sink the whole adoption: keep the original.
+  const description = proposed && proposed.length <= 1024 ? proposed : job.original.description.replace(/\s+/g, " ").trim();
   if (!NAME_RE.test(name) || name.length > 64) errors.push(`invalid skill name ${JSON.stringify(name)}`);
   if (!description || description.length > 1024) errors.push("skill description missing or longer than 1024 characters");
   for (const f of scanOutput(description, job.original.description)) if (f.level === "reject") errors.push(`description: ${f.message}`);

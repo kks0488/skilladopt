@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { existsSync } from "node:fs";
+import { createInterface } from "node:readline/promises";
 import { dirname, join, posix, resolve } from "node:path";
 import { parseFrontmatter } from "./blocks.js";
 import { projectHash, readProject, type Project } from "./facts.js";
@@ -16,7 +17,8 @@ import { c, oneLine, randomId, readJson, safePrint, UserError, VERSION } from ".
 const HELP = `skilladopt ${VERSION} — Don't install agent skills. Adopt them.
 
 Usage
-  skilladopt add <repo> [skill]  Fit a skill to this project. <repo> is a GitHub link, owner/repo,
+  skilladopt <repo> [skill]      Fit a skill to this project and install it (asks before installing).
+  skilladopt add <repo> [skill]  Same; "add" is optional. <repo> is a GitHub link, owner/repo,
                                  owner/repo/path or ./local/dir; [skill] picks one skill by name
   skilladopt review <job>        Show items that need a human; decide with --decide <id>=keep|drop|accept
   skilladopt apply <job>         Install the adopted skill (transactional)
@@ -217,7 +219,7 @@ async function decideWith(job: Job, project: Project, opts: Opts, carriedSummary
 }
 
 
-function finish(job: Job, opts: Opts, root: string): number {
+async function finish(job: Job, opts: Opts, root: string): Promise<number> {
   if (job.state !== "invalid" && job.skill.name) {
     if (opts.name) {
       if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(opts.name) || opts.name.length > 64) throw new UserError("--name must be lowercase-hyphenated, max 64 chars");
@@ -232,8 +234,71 @@ function finish(job: Job, opts: Opts, root: string): number {
   sealIfReady(job);
   saveJob(job);
   printJob(job);
+  if (interactive(opts)) return askAndApply(job, opts, root);
   if (job.state === "ready" && opts.yes) return doApply(job, opts, root);
   return job.state === "ready" || job.state === "applied" ? 0 : job.state === "invalid" ? 2 : 1;
+}
+
+/** A person at a terminal (not an agent, CI or a pipe) gets asked instead of handed commands. */
+function interactive(opts: Opts): boolean {
+  return !!process.stdin.isTTY && !!process.stdout.isTTY && !opts.decisions && !opts.yes && !process.env.CI;
+}
+
+async function askAndApply(job: Job, opts: Opts, root: string): Promise<number> {
+  if (job.state !== "needs-review" && job.state !== "ready") return job.state === "invalid" ? 2 : 1;
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const blocks = new Map(job.blocks.map((b) => [b.id, b]));
+    const items = [
+      ...job.decisions.filter((d) => d.action === "review").map((d) => d.blockId),
+      ...job.additions.filter((a) => a.status === "review").map((a) => a.id),
+      ...(job.behavior?.decision === "pending" ? ["fm"] : []),
+    ];
+    for (const id of items) {
+      const d = job.decisions.find((x) => x.blockId === id);
+      const a = job.additions.find((x) => x.id === id);
+      log();
+      if (id === "fm") log(`${c.bold("fm")}  frontmatter fields that change agent behaviour: ${job.behavior!.fields.join(", ")}`);
+      else if (a) { log(`${c.bold(id)}  new text after ${a.after}:`); log(c.blue(indent(safePrint(a.text), 4))); }
+      else if (d) {
+        log(`${c.bold(id)}  ${safePrint(d.flags[0] ?? "")}`);
+        log(c.dim(indent(safePrint(blocks.get(id)!.text), 4)));
+        if (d.proposed?.text) { log(c.dim("    ── proposed ──")); log(c.blue(indent(safePrint(d.proposed.text), 4))); }
+      }
+      const canAccept = !!(a || d?.proposed || id === "fm");
+      const prompt = canAccept ? `${c.yellow("?")} [a]ccept, [k]eep original, [d]rop: ` : `${c.yellow("?")} [k]eep original, [d]rop: `;
+      for (;;) {
+        const answer = (await rl.question(prompt)).trim().toLowerCase();
+        const choice = answer.startsWith("a") && canAccept ? "accept" : answer.startsWith("k") ? "keep" : answer.startsWith("d") ? "drop" : "";
+        if (!choice) continue;
+        const err = decide(job, id, choice, readProject(root));
+        if (!err) break;
+        log(c.yellow(err));
+      }
+    }
+    if (items.length) {
+      job.rev += 1;
+      refreshState(job);
+      sealIfReady(job);
+      saveJob(job);
+    }
+    if (job.state !== "ready") return 1;
+    const where = job.targets.join(", ");
+    if (!licenseAllowsCommit(job) && !opts.private) {
+      const ok = (await rl.question(`\n${c.yellow("?")} No recognised open-source license (${job.license?.spdx ?? "none"}). Install privately, kept out of git? [y/N] `)).trim().toLowerCase();
+      if (!ok.startsWith("y")) { log(c.dim("Not installed.")); return 0; }
+      opts.private = true;
+    } else {
+      const yes = (await rl.question(`\n${c.green("?")} Install ${c.bold(job.skill.name)} into ${where}? [Y/n] `)).trim().toLowerCase();
+      if (yes && !yes.startsWith("y")) { log(c.dim(`Not installed. Later: skilladopt apply ${job.id}`)); return 0; }
+    }
+  } catch (e) {
+    if ((e as Error).name === "AbortError") { log(c.dim(`\nCancelled. Nothing was installed. Later: skilladopt review ${job.id}`)); return 1; }
+    throw e;
+  } finally {
+    rl.close();
+  }
+  return doApply(job, opts, root);
 }
 
 function sealIfReady(job: Job): void {
@@ -569,14 +634,16 @@ async function main(argv: string[]): Promise<number> {
   }
   const pending = pendingJournal(root);
   if (pending && cmd !== "apply") log(c.yellow(`note: an earlier apply was interrupted (${pending}). Run \`skilladopt recover\` to roll it back.`));
-  switch (cmd) {
+  const COMMANDS = ["add", "update", "review", "apply", "impact", "check", "status", "ls"];
+  if (!COMMANDS.includes(cmd ?? "")) opts._.unshift("add"); // `skilladopt owner/repo skill` is the same as `skilladopt add owner/repo skill`
+  switch (opts._[0]) {
     case "add": return cmdAdd(opts, root);
     case "update": return cmdUpdate(opts, root);
     case "review": return cmdReview(opts, root);
     case "apply": return cmdApply(opts, root);
     case "impact": case "check": return cmdImpact(opts, root);
     case "status": case "ls": return cmdStatus(opts, root);
-    default: throw new UserError(`Unknown command "${cmd}". Run skilladopt --help.`);
+    default: throw new UserError(`Unknown command. Run skilladopt --help.`);
   }
 }
 

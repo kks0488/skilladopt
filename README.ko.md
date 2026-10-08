@@ -22,12 +22,23 @@ skilladopt는 스킬을 넣기 전에 내 프로젝트에 맞게 고치고, 줄�
 
 ## 시작하기
 
+한 번만 실행하세요.
+
+```bash
+npx skilladopt setup
+```
+
+그다음 아무 프로젝트에서 Claude Code나 Codex에게 이렇게 말하면 됩니다.
+
+> 이 프로젝트에 프론트엔드 디자인 스킬 넣어줘.
+
+에이전트가 스킬을 찾고, skilladopt로 내 프로젝트에 맞게 고치고, 무엇이 바뀌었는지 보여 준 뒤 설치할지 묻습니다.
+
+넣을 스킬을 이미 안다면 직접 지정할 수도 있습니다.
+
 ```bash
 npx skilladopt anthropics/skills frontend-design
 ```
-
-GitHub 저장소와 그 안의 스킬 이름입니다(GitHub 링크를 붙여넣어도 됩니다).
-스킬을 읽고, 무엇을 유지·변경·제거했는지 보여 주고, 확신이 없는 부분은 묻고, 괜찮다고 하면 설치합니다.
 
 > [!NOTE]
 > Node 20 이상과 [Claude Code](https://claude.com/claude-code) 또는 [Codex](https://github.com/openai/codex)가 필요합니다. 스킬을 읽는 일은 둘 중 하나가 합니다.
@@ -62,6 +73,7 @@ npx skilladopt impact
 
 | 명령 | 하는 일 |
 |---|---|
+| `skilladopt setup` | Claude Code·Codex가 스킬을 입양하도록 설정. 이후엔 말로 요청 |
 | `skilladopt <저장소> [스킬]` | 스킬을 이 프로젝트에 맞추고 설치 |
 | `skilladopt impact` | 프로젝트 변경이 영향을 준 판단 보기(`--upstream`은 원본 스킬 변경도 확인) |
 | `skilladopt update <이름>` | 원본 최신판에 다시 맞춤. 여전히 맞는 판단은 재사용 |
@@ -69,7 +81,7 @@ npx skilladopt impact
 | `skilladopt doctor` | 이 컴퓨터에서 AI 작업자가 격리되는지 확인 |
 
 대화형 터미널이 아닌 곳(스크립트, CI, 에이전트)에서는 설치 전에 멈춥니다. `skilladopt review last`와 `skilladopt apply last`로 마무리하세요.
-에이전트가 이 과정을 대신하게 하려면 [skilladopt 에이전트 스킬](skill/skilladopt/SKILL.md)을 넣으세요.
+`setup`은 [skilladopt 에이전트 스킬](skill/skilladopt/SKILL.md)을 `~/.claude/skills`와 `~/.agents/skills`에 넣습니다.
 
 <details>
 <summary><b>어떻게 판단하나</b></summary>

@@ -1,6 +1,6 @@
 ---
 name: skilladopt
-description: Adopt a third-party agent skill into this project instead of installing it as-is. Use when the user wants to add, install, import or "use" a skill from GitHub or a local folder (e.g. "add this skill", "install ponytail", "use this frontend skill here"), when they ask whether adopted skills are still valid after project changes, or when they want to update an adopted skill to its latest upstream version.
+description: Find and adopt third-party agent skills into this project instead of installing them as-is. Use whenever a skill would be added to this project, whether the user names one ("add anthropics/skills frontend-design", "use this skill") or only describes a need ("is there a skill for frontend design?", "get me a skill for writing release notes"), and before installing a skill any other way. Also use when the user asks whether adopted skills still fit after project changes, or wants an adopted skill updated.
 license: MIT
 ---
 
@@ -13,6 +13,13 @@ project or upstream change invalidated.
 
 Run it with `npx skilladopt` (Node 20+). It needs `codex` or `claude` on PATH for the isolated
 worker that reads the skill.
+
+## Find a skill when the user only describes a need
+
+1. Search for candidates: `npx skills find <keywords>` lists skills from skills.sh; GitHub search also works.
+2. Prefer well-known publishers and skills that are pure Markdown. Ignore install counts that look inflated.
+3. Show the user at most three candidates in one line each (what it does, who publishes it) and ask which one.
+   Do not install anything with `npx skills add`; continue below with the chosen one.
 
 ## Adopt a skill
 

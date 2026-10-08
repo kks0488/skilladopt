@@ -22,13 +22,23 @@ and tells you which lines to look at again when your project changes.
 
 ## Quick start
 
+Run this once:
+
+```bash
+npx skilladopt setup
+```
+
+Then ask Claude Code or Codex in any project:
+
+> Add a frontend design skill to this project.
+
+Your agent finds a skill, fits it to your project with skilladopt, shows you what changed and asks before installing.
+
+Already know which skill you want? Name it yourself:
+
 ```bash
 npx skilladopt anthropics/skills frontend-design
 ```
-
-That's a GitHub repo and a skill inside it (a GitHub link works too).
-skilladopt reads the skill, shows you what it kept, changed and removed, asks about anything it isn't sure of,
-and installs it once you say yes.
 
 > [!NOTE]
 > You need Node 20 or newer and either [Claude Code](https://claude.com/claude-code) or [Codex](https://github.com/openai/codex). One of them does the reading.
@@ -63,6 +73,7 @@ It points at the one decision out of 25 that lost its evidence and the new rule 
 
 | Command | What it does |
 |---|---|
+| `skilladopt setup` | Teach Claude Code and Codex to adopt skills, so you can just ask |
 | `skilladopt <repo> [skill]` | Fit a skill to this project and install it |
 | `skilladopt impact` | Show which decisions your project changes affect (`--upstream` also checks the original skill) |
 | `skilladopt update <name>` | Re-fit to the latest version of the original, reusing decisions that still hold |
@@ -70,7 +81,7 @@ It points at the one decision out of 25 that lost its evidence and the new rule 
 | `skilladopt doctor` | Check that the AI worker is isolated on your machine |
 
 Outside an interactive terminal (scripts, CI, agents) it stops before installing. Finish with `skilladopt review last` and `skilladopt apply last`.
-To let your agent do all of this for you, add the [skilladopt agent skill](skill/skilladopt/SKILL.md).
+`setup` installs the [skilladopt agent skill](skill/skilladopt/SKILL.md) into `~/.claude/skills` and `~/.agents/skills`.
 
 <details>
 <summary><b>How it decides</b></summary>

@@ -587,3 +587,18 @@ test("a description padded past 1024 characters falls back to the original inste
   assert.equal(sa(p, ["apply", "last"]).code, 0);
   assert.match(readFileSync(join(p, ".agents/skills/demo/SKILL.md"), "utf8"), /description: "Short original\."/);
 });
+
+test("setup installs the agent skill for both agents and never overwrites a changed copy", () => {
+  const h = join(base, "setup-home");
+  const env = { SKILLADOPT_SETUP_HOME: h };
+  let r = sa(base, ["setup"], env);
+  assert.equal(r.code, 0, r.out);
+  const claude = join(h, ".claude/skills/skilladopt/SKILL.md");
+  assert.match(readFileSync(claude, "utf8"), /^---\nname: skilladopt/);
+  assert.ok(existsSync(join(h, ".agents/skills/skilladopt/SKILL.md")));
+  writeFileSync(claude, "my edits\n");
+  r = sa(base, ["setup"], env);
+  assert.match(r.out, /kept ~\/\.claude\/skills\/skilladopt/);
+  assert.equal(readFileSync(claude, "utf8"), "my edits\n");
+  assert.match(sa(base, ["setup", "--force"], env).out, /✓ ~\/\.claude\/skills\/skilladopt\n/);
+});

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { dirname, join, posix, resolve } from "node:path";
 import { parseFrontmatter } from "./blocks.js";
@@ -12,11 +14,12 @@ import { fetchGithub, fetchLocal, parseSource, type FetchedSource, type SourceMe
 import { applyFiles, pendingJournal, readDecisions, readLock, recover } from "./store.js";
 import { applyWorkerOutput, decide, refreshState } from "./validate.js";
 import { buildBrief, detectWorker, doctor, runWorker, type RawDecisions, type WorkerKind } from "./worker.js";
-import { c, oneLine, randomId, readJson, safePrint, UserError, VERSION } from "./util.js";
+import { c, oneLine, randomId, readJson, safePrint, UserError, VERSION, writeFileAtomic } from "./util.js";
 
 const HELP = `skilladopt ${VERSION} — Don't install agent skills. Adopt them.
 
 Usage
+  skilladopt setup               Teach Claude Code and Codex to adopt skills: after this, just ask your agent
   skilladopt <repo> [skill]      Fit a skill to this project and install it (asks before installing).
   skilladopt add <repo> [skill]  Same; "add" is optional. <repo> is a GitHub link, owner/repo,
                                  owner/repo/path or ./local/dir; [skill] picks one skill by name
@@ -237,6 +240,38 @@ async function finish(job: Job, opts: Opts, root: string): Promise<number> {
   if (interactive(opts)) return askAndApply(job, opts, root);
   if (job.state === "ready" && opts.yes) return doApply(job, opts, root);
   return job.state === "ready" || job.state === "applied" ? 0 : job.state === "invalid" ? 2 : 1;
+}
+
+// ---------------------------------------------------------------- setup
+
+const PERSONAL_SKILL_DIRS = [".claude/skills/skilladopt", ".agents/skills/skilladopt"];
+
+/** Puts the skilladopt agent skill where Claude Code and Codex look for personal skills. */
+function cmdSetup(opts: Opts): number {
+  const skill = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "skill", "skilladopt", "SKILL.md"), "utf8");
+  const home = process.env.SKILLADOPT_SETUP_HOME ?? homedir();
+  for (const dir of PERSONAL_SKILL_DIRS) {
+    const file = join(home, dir, "SKILL.md");
+    const current = existsSync(file) ? readFileSync(file, "utf8") : null;
+    if (current === skill) { log(`${c.green("✓")} ~/${dir} is up to date`); continue; }
+    if (current !== null && !opts.force) { log(`${c.yellow("kept")} ~/${dir} (it differs from this version; --force replaces it)`); continue; }
+    writeFileAtomic(file, skill);
+    log(`${c.green("✓")} ~/${dir}`);
+  }
+  log(`\nNow open Claude Code or Codex in a project and ask for a skill, for example:\n  ${c.bold('"Add a frontend design skill to this project."')}\nYour agent finds one, fits it with skilladopt and asks you before installing.`);
+  return 0;
+}
+
+async function offerSetup(): Promise<number> {
+  log(HELP);
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const a = (await rl.question("Set up skilladopt for Claude Code and Codex now? [Y/n] ")).trim().toLowerCase();
+    return a === "" || a === "y" || a === "yes" ? cmdSetup(parseArgs([])) : 0;
+  } catch (e) {
+    if ((e as Error).name === "AbortError") return 0;
+    throw e;
+  } finally { rl.close(); }
 }
 
 /** A person at a terminal (not an agent, CI or a pipe) gets asked instead of handed commands. */
@@ -611,10 +646,12 @@ function indent(s: string, n: number): string {
 
 async function main(argv: string[]): Promise<number> {
   // Help and version are answered before option parsing, so they always work.
+  if (!argv.length && process.stdin.isTTY && process.stdout.isTTY && !process.env.CI) return offerSetup();
   if (!argv.length || argv[0] === "help" || argv.includes("--help") || argv.includes("-h")) { log(HELP); return 0; }
   if (argv[0] === "version" || argv.includes("--version") || argv.includes("-v")) { log(VERSION); return 0; }
   const opts = parseArgs(argv);
   const cmd = opts._[0];
+  if (cmd === "setup") return cmdSetup(opts);
   const root = findRoot(opts.cwd ?? process.cwd());
   if (cmd === "doctor") {
     const kind = (opts.worker ?? detectWorker()) as WorkerKind;

@@ -5,7 +5,7 @@ import { checkEntries, classifyFile, LIMITS, localReferences, scanInput, type Fi
 import { UserError, sha256 } from "./util.js";
 
 export type SourceSpec =
-  | { type: "github"; owner: string; repo: string; ref?: string; path: string }
+  | { type: "github"; owner: string; repo: string; ref?: string; path: string; name?: string }
   | { type: "local"; dir: string };
 
 export interface SourceMeta {
@@ -110,17 +110,8 @@ export async function fetchGithub(src: Extract<SourceSpec, { type: "github" }>):
   const all = tree.tree as { path: string; mode: string; type: string; size?: number; sha: string }[];
 
   let base = src.path;
-  if (!all.some((e) => e.type === "blob" && e.path === (base ? `${base}/SKILL.md` : "SKILL.md"))) {
-    const candidates = all
-      .filter((e) => e.type === "blob" && (e.path === "SKILL.md" || e.path.endsWith("/SKILL.md")))
-      .map((e) => e.path.replace(/\/?SKILL\.md$/, ""))
-      .filter((d) => !base || d === base || d.startsWith(`${base}/`));
-    if (candidates.length === 1) base = candidates[0]!;
-    else if (candidates.length === 0) throw new UserError(`No SKILL.md found under ${src.owner}/${src.repo}/${base}`);
-    else {
-      const list = candidates.slice(0, 25).map((d) => `  ${src.owner}/${src.repo}/${d}`).join("\n");
-      throw new UserError(`Found ${candidates.length} skills. Pick one:\n${list}${candidates.length > 25 ? "\n  …" : ""}`);
-    }
+  if (src.name || !all.some((e) => e.type === "blob" && e.path === (base ? `${base}/SKILL.md` : "SKILL.md"))) {
+    base = pickSkill(all.filter((e) => e.type === "blob").map((e) => e.path), base, src.name, `${src.owner}/${src.repo}`);
   }
   const prefix = base ? `${base}/` : "";
   const inDir = all.filter((e) => e.path.startsWith(prefix) && e.type !== "tree");
@@ -247,6 +238,27 @@ function nearestLicense(from: string, root: string): FetchedSource["license"] {
     if (d === root) break;
   }
   return null;
+}
+
+/**
+ * Choose the skill directory in a repository. `name` picks a skill by its folder name; copies mirrored
+ * into dot-folders (.claude/, .agents/ …) lose to the plain one. Several different skills is an error
+ * that lists the short command for each.
+ */
+export function pickSkill(paths: string[], base: string, name: string | undefined, repo: string): string {
+  const skillName = (d: string) => d.split("/").pop() || repo.split("/").pop()!;
+  const rank = (d: string) => (d.split("/").some((p) => p.startsWith(".")) ? 1000 : 0) + d.length;
+  let candidates = paths
+    .filter((p) => p === "SKILL.md" || p.endsWith("/SKILL.md"))
+    .map((p) => p.replace(/\/?SKILL\.md$/, ""))
+    .filter((d) => !base || d === base || d.startsWith(`${base}/`))
+    .sort((a, b) => rank(a) - rank(b));
+  if (name) candidates = candidates.filter((d) => skillName(d) === name).slice(0, 1);
+  const names = [...new Set(candidates.map(skillName))];
+  if (names.length === 1) return candidates[0]!;
+  if (!candidates.length) throw new UserError(`No skill${name ? ` named "${name}"` : ""} found in ${repo}${base ? `/${base}` : ""}`);
+  const list = names.slice(0, 30).map((n) => `  skilladopt add ${repo} ${n}`).join("\n");
+  throw new UserError(`This repository has ${names.length} skills. Pick one:\n${list}${names.length > 30 ? "\n  …" : ""}`);
 }
 
 function gitRoot(dir: string): string | null {

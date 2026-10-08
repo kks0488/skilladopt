@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { splitBlocks, parseFrontmatter, isObligation } from "../dist/blocks.js";
 import { scanInput, scanOutput, checkEntries, localReferences } from "../dist/scan.js";
-import { parseSource } from "../dist/source.js";
+import { parseSource, pickSkill } from "../dist/source.js";
 
 test("splitBlocks: headings, lists, code fences and parents", () => {
   const body = [
@@ -103,4 +103,13 @@ test("--help and --version work without a command", async () => {
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, re);
   }
+});
+
+test("pickSkill: by name, plain copy over dot-folder mirrors, helpful error otherwise", () => {
+  const paths = [".claude/skills/brag/SKILL.md", ".agents/skills/brag/SKILL.md", "skills/brag/SKILL.md", "skills/brag-slim/SKILL.md", "README.md"];
+  assert.equal(pickSkill(paths, "", "brag", "o/r"), "skills/brag");
+  assert.equal(pickSkill(paths, "", "brag-slim", "o/r"), "skills/brag-slim");
+  assert.throws(() => pickSkill(paths, "", undefined, "o/r"), /2 skills[\s\S]*skilladopt add o\/r brag-slim/);
+  assert.throws(() => pickSkill(paths, "", "nope", "o/r"), /No skill named "nope"/);
+  assert.equal(pickSkill([".claude/skills/x/SKILL.md", "skills/x/SKILL.md"], "", undefined, "o/r"), "skills/x");
 });

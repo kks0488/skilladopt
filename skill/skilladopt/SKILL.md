@@ -16,8 +16,9 @@ worker that reads the skill.
 
 ## Adopt a skill
 
-1. Run `npx skilladopt add <source>` from the project root.
-   `<source>` is a GitHub URL (`https://github.com/owner/repo/tree/main/skills/x`), `owner/repo/path`, or `./local/dir`.
+1. Run `npx skilladopt add <repo> [skill]` from the project root, for example
+   `npx skilladopt add anthropics/skills frontend-design`. `<repo>` can also be a GitHub link,
+   `owner/repo/path` or `./local/dir`. If the repo has several skills, it lists the command for each.
 2. Read the result to the user in plain words: the verdict, what was dropped or changed and why.
    - `REJECTED`: the skill was refused before any model saw it (hidden characters, scripts, files outside the skill folder). Explain why. Do not work around it.
    - `rejected` / `no-op` verdict: the skill does not fit or adds nothing. Say so; nothing is installed.

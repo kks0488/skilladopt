@@ -16,7 +16,8 @@ import { c, oneLine, randomId, readJson, safePrint, UserError, VERSION } from ".
 const HELP = `skilladopt ${VERSION} — Don't install agent skills. Adopt them.
 
 Usage
-  skilladopt add <source>        Fit a skill to this project (GitHub URL, owner/repo/path, or ./local/dir)
+  skilladopt add <repo> [skill]  Fit a skill to this project. <repo> is a GitHub link, owner/repo,
+                                 owner/repo/path or ./local/dir; [skill] picks one skill by name
   skilladopt review <job>        Show items that need a human; decide with --decide <id>=keep|drop|accept
   skilladopt apply <job>         Install the adopted skill (transactional)
   skilladopt impact              What did project changes invalidate? (add --upstream to check sources)
@@ -104,9 +105,10 @@ const log = (s = "") => process.stdout.write(s + "\n");
 
 // ---------------------------------------------------------------- add / update
 
-async function fetchSource(meta: string | SourceMeta, ref?: string): Promise<FetchedSource> {
+async function fetchSource(meta: string | SourceMeta, ref?: string, name?: string): Promise<FetchedSource> {
   if (typeof meta === "string") {
     const spec = parseSource(meta);
+    if (spec.type === "github" && name) spec.name = name;
     return spec.type === "local" ? await fetchLocal(spec.dir) : fetchGithub(spec);
   }
   if (meta.type === "local") return await fetchLocal(meta.dir!);
@@ -243,9 +245,9 @@ function sealIfReady(job: Job): void {
 
 async function cmdAdd(opts: Opts, root: string): Promise<number> {
   const spec = opts._[1];
-  if (!spec) throw new UserError("Usage: skilladopt add <source>");
+  if (!spec) throw new UserError("Usage: skilladopt add <github-repo-or-url> [skill-name]");
   const project = readProject(root);
-  const src = await fetchSource(spec);
+  const src = await fetchSource(spec, undefined, opts._[2]);
   const { blocks, problems, warnings } = inspect(src);
   printSource(src, project, warnings);
   if (problems.length) {

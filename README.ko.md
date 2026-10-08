@@ -4,9 +4,7 @@
 
 [English](README.md)
 
-![skilladopt 데모: ponytail을 입양한 뒤 팀원이 테스트 명령을 바꾸고 규칙을 추가하자 impact가 다시 볼 곳을 정확히 짚는 장면](assets/demo.gif)
-
-<sub>Codex 작업자로 실제 실행한 화면입니다. 작업자가 스킬을 읽는 약 40초는 잘라냈습니다. 녹화 대본: <a href="assets/demo.tape">assets/demo.tape</a></sub>
+![skilladopt가 하는 일 (18초)](assets/explainer.gif)
 
 남이 만든 에이전트 스킬(`SKILL.md`)은 **그 사람의 프로젝트**를 기준으로 쓰여 있습니다.
 인기 스킬을 그대로 넣으면, AI 코딩 에이전트가 작성자의 기술 스택과 명령어, 습관을 따라가기 시작합니다.
@@ -57,6 +55,10 @@ skilladopt doctor            내 컴퓨터에서 작업자 격리가 실제로 �
 의무(금지, 승인, 검증 단계)가 담긴 문단은 사람 없이 지우거나 다시 쓸 수 없습니다.
 
 ## 예시
+![skilladopt 데모: ponytail을 입양한 뒤 팀원이 테스트 명령을 바꾸고 규칙을 추가하자 impact가 다시 볼 곳을 정확히 짚는 장면](assets/demo.gif)
+
+<sub>Codex 작업자로 실제 실행한 화면입니다. 작업자가 스킬을 읽는 약 40초는 잘라냈습니다. 녹화 대본: <a href="assets/demo.tape">assets/demo.tape</a></sub>
+
 
 ```
 $ skilladopt add DietrichGebert/ponytail/.openclaw/skills/ponytail

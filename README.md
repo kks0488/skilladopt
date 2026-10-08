@@ -4,9 +4,7 @@
 
 [한국어](README.ko.md)
 
-![skilladopt demo: adopt ponytail, then a teammate changes the test script and adds a rule, and impact points at exactly what to re-check](assets/demo.gif)
-
-<sub>Real run with the Codex worker; the ~40 s while the worker reads the skill is cut. Recorded from <a href="assets/demo.tape">assets/demo.tape</a>.</sub>
+![What skilladopt does, in 18 seconds](assets/explainer.gif)
 
 Agent skills (`SKILL.md`) are written for someone else's project. Drop a popular one into yours and
 your coding agent starts following the author's stack, the author's commands and the author's habits.
@@ -57,6 +55,10 @@ Each paragraph of the skill gets one decision, and every non-trivial decision ci
 Paragraphs that carry a duty (a prohibition, an approval, a verification step) can never be dropped or rewritten without you.
 
 ## Example
+![skilladopt demo: adopt ponytail, then a teammate changes the test script and adds a rule, and impact points at exactly what to re-check](assets/demo.gif)
+
+<sub>Real run with the Codex worker; the ~40 s while the worker reads the skill is cut. Recorded from <a href="assets/demo.tape">assets/demo.tape</a>.</sub>
+
 
 ```
 $ skilladopt add DietrichGebert/ponytail/.openclaw/skills/ponytail

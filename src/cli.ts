@@ -532,10 +532,11 @@ function indent(s: string, n: number): string {
 // ---------------------------------------------------------------- main
 
 async function main(argv: string[]): Promise<number> {
+  // Help and version are answered before option parsing, so they always work.
+  if (!argv.length || argv[0] === "help" || argv.includes("--help") || argv.includes("-h")) { log(HELP); return 0; }
+  if (argv[0] === "version" || argv.includes("--version") || argv.includes("-v")) { log(VERSION); return 0; }
   const opts = parseArgs(argv);
   const cmd = opts._[0];
-  if (!cmd || cmd === "help" || argv.includes("--help") || argv.includes("-h")) { log(HELP); return 0; }
-  if (cmd === "version" || argv.includes("--version")) { log(VERSION); return 0; }
   const root = findRoot(opts.cwd ?? process.cwd());
   if (cmd === "doctor") {
     const kind = (opts.worker ?? detectWorker()) as WorkerKind;

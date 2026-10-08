@@ -1,6 +1,6 @@
 {
   "name": "skilladopt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Don't install agent skills. Adopt them. Fit third-party SKILL.md files to your codebase, keep the evidence for every change, and know exactly what to re-check when your project or the upstream skill changes.",
   "type": "module",
   "bin": {

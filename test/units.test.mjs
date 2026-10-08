@@ -93,3 +93,14 @@ test("parseSource forms", () => {
   assert.equal(parseSource("./here").type, "local");
   assert.throws(() => parseSource("o/r/../x"));
 });
+
+test("--help and --version work without a command", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const { fileURLToPath } = await import("node:url");
+  const cli = fileURLToPath(new URL("../dist/cli.js", import.meta.url));
+  for (const [args, re] of [[["--help"], /Usage/], [["--version"], /^\d+\.\d+\.\d+/], [[], /Usage/], [["add", "--help"], /Usage/]]) {
+    const r = spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, re);
+  }
+});

@@ -7,6 +7,7 @@
 [![npm](https://img.shields.io/npm/v/skilladopt?color=7ee2a8)](https://www.npmjs.com/package/skilladopt)
 [![ci](https://github.com/kks0488/skilladopt/actions/workflows/ci.yml/badge.svg)](https://github.com/kks0488/skilladopt/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-b9a2f0)](LICENSE)
+[![X](https://img.shields.io/badge/follow-@kks0488-000?logo=x)](https://x.com/kks0488)
 
 [English](README.md) · [한국어](README.ko.md)
 

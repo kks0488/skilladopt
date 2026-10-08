@@ -4,7 +4,7 @@
 
 [한국어](README.ko.md)
 
-![What skilladopt does, in 18 seconds](assets/explainer.gif)
+![What skilladopt does, in 20 seconds](assets/explainer.gif)
 
 Agent skills (`SKILL.md`) are written for someone else's project. Drop a popular one into yours and
 your coding agent starts following the author's stack, the author's commands and the author's habits.

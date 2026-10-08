@@ -4,7 +4,7 @@
 
 [English](README.md)
 
-![skilladopt가 하는 일 (18초)](assets/explainer.gif)
+![skilladopt가 하는 일 (20초)](assets/explainer.gif)
 
 남이 만든 에이전트 스킬(`SKILL.md`)은 **그 사람의 프로젝트**를 기준으로 쓰여 있습니다.
 인기 스킬을 그대로 넣으면, AI 코딩 에이전트가 작성자의 기술 스택과 명령어, 습관을 따라가기 시작합니다.

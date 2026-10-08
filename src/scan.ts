@@ -50,10 +50,6 @@ export function scanOutput(text: string, sourceText: string): Finding[] {
   return out;
 }
 
-export function urlsIn(text: string): string[] {
-  return [...new Set(text.match(URL) ?? [])];
-}
-
 export interface FileEntry {
   path: string; // relative to the skill directory, posix separators
   size: number;

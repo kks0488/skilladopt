@@ -18,6 +18,8 @@ export interface SkillImpact {
   localEdits: string[];
   upstream?: { from: string; to: string; changed: number; added: number; removed: number; affected: Stale[] } | { error: string };
   missingRecord?: boolean;
+  /** Instruction lines that did not exist when the skill was adopted. Kept paragraphs were never checked against them. */
+  newRules?: string[];
 }
 
 /** Re-check one piece of recorded evidence against the project as it is now. */
@@ -99,6 +101,11 @@ export function projectImpact(project: Project, upstream?: Map<string, FetchedSo
     const rec = readDecisions(project.root, name);
     if (!rec) { out.push({ name, total: 0, stale: [], localEdits: localEdits(project.root, entry), missingRecord: true }); continue; }
     const item: SkillImpact = { name, total: rec.blocks.length, stale: staleFor(project, rec), localEdits: localEdits(project.root, entry) };
+    if (entry.agents) {
+      const known = new Set(entry.agents);
+      const fresh = project.agents.filter((a) => !known.has(a.hash)).map((a) => `${a.ref} "${a.text.trim().slice(0, 70)}"`);
+      if (fresh.length) item.newRules = fresh;
+    }
     const up = upstream?.get(name);
     if (up instanceof Error) item.upstream = { error: up.message };
     else if (up && up.meta.commit && up.meta.commit !== entry.source.commit) {

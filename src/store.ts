@@ -12,6 +12,7 @@ export interface LockEntry {
   targets: string[];
   output: Record<string, string>; // relative file path inside the skill dir -> sha256
   projectHash: string;
+  agents?: string[]; // instruction-line hashes at adoption: lets impact spot rules added later
   adoptedAt: string;
   job: string;
   private: boolean;
@@ -356,6 +357,7 @@ function writeRecords(job: Job, files: Record<string, string>, outputHashes: Rec
     targets: job.targets,
     output: outputHashes,
     projectHash: job.projectHash,
+    agents: job.agentsAtAdoption,
     adoptedAt: new Date().toISOString().slice(0, 10),
     job: job.id,
     private: opts.private,

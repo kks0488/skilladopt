@@ -75,10 +75,6 @@ export function isObligation(text: string): boolean {
 
 const PROHIBITION = /\b(never|must not|do not|don't|forbidden|prohibit(?:ed)?|avoid|unless|only if)\b|금지|하지\s?마|절대/i;
 
-export function hasProhibition(text: string): boolean {
-  return PROHIBITION.test(text);
-}
-
 /** The duty and prohibition phrases in a text, lower-cased; a faithful edit keeps all of them. */
 export function dutyTerms(text: string): string[] {
   const out: string[] = [];

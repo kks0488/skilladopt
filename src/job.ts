@@ -82,6 +82,8 @@ export interface Job {
   manifest?: string;
   /** Upstream frontmatter fields that change agent behaviour (allowed-tools, …): a human keeps or drops them. */
   behavior?: { fields: string[]; decision: "pending" | "keep" | "drop" };
+  /** Hashes of the instruction lines (AGENTS.md, CLAUDE.md…) the decisions were made against. */
+  agentsAtAdoption?: string[];
   warnings?: string[];
 }
 
@@ -122,8 +124,3 @@ export function loadJob(ref: string, root?: string): Job {
   return readJson<Job>(join(dir, id, "job.json"));
 }
 
-export function blockById(job: Job, id: string): Block {
-  const b = job.blocks.find((x) => x.id === id);
-  if (!b) throw new UserError(`Unknown block ${id}`);
-  return b;
-}

@@ -104,8 +104,6 @@ function sortDecisions(job: Job, ds: Decision[]): Decision[] {
 // ---------------------------------------------------------------- bind verification
 
 const CODE_SPAN = /`([^`\n]+)`/g;
-const FILLER = new Set(["run", "runs", "with", "and", "or", "the", "a", "an", "using", "use", "via", "then", "for", "to", "it", "them", "in", "this", "project", "both", "e", "g", "eg", "i", "command", "script", "scripts"]);
-
 function words(text: string): string[] {
   return text.replace(CODE_SPAN, " ").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 }

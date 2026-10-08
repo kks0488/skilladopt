@@ -516,3 +516,19 @@ test("R13: the previous install's temporary -old copy is verified as ignored bef
   assert.match(r.out, /git would not ignore .*skilladopt-old/);
   assert.ok(!existsSync(join(p, ".agents/skills/demo.skilladopt-old")));
 });
+
+test("new instruction lines after adoption are reported, and update re-decides everything", () => {
+  const p = newProject("rules");
+  const s = newSkill("rules", "---\nname: demo\ndescription: d\n---\n# Demo\n\nDelete unused files.\n");
+  sa(p, ["add", s, "--decisions", dfile(keepAll(["b01", "b02"])), "--yes"]);
+  let r = sa(p, ["impact"]);
+  assert.equal(r.code, 0, r.out);
+  write(join(p, "AGENTS.md"), "# Rules\n\nAsk before adding dependencies.\nNever delete files in docs/.\n");
+  r = sa(p, ["impact"]);
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /1 instruction line\(s\) added or changed since adoption/);
+  assert.match(r.out, /Never delete files in docs/);
+  r = sa(p, ["update", "demo", "--decisions", dfile({ ...keepAll(["b01", "b02"]), skill: { name: "demo", description: "d" } })]);
+  assert.match(r.out, /every paragraph is decided again/);
+  assert.match(r.out, /2 block\(s\) to decide/);
+});

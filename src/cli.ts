@@ -296,7 +296,10 @@ async function cmdUpdate(opts: Opts, root: string): Promise<number> {
   };
   const carried: Decision[] = [];
   const carriedSummary: string[] = [];
-  for (const b of blocks) {
+  const known = new Set(entry.agents ?? project.agents.map((a) => a.hash));
+  const newRules = project.agents.filter((a) => !known.has(a.hash)).length;
+  if (newRules) log(c.dim(`rules    ${newRules} instruction line(s) changed since adoption: every paragraph is decided again`));
+  for (const b of newRules ? [] : blocks) {
     const old = oldByHash.get(`${b.file}\n${b.hash}`);
     if (!old || !sameChain(b.parent, old.parent)) continue;
     const d = old.decision;
@@ -381,6 +384,7 @@ function doApply(job: Job, opts: Opts, root: string): number {
   if (!licenseAllowsCommit(job) && !opts.private) {
     throw new UserError(`License is ${job.license?.spdx ?? "missing"}; skilladopt only commits adapted copies of permissively licensed skills. Use --private to install it outside git.`);
   }
+  job.agentsAtAdoption = project.agents.map((a) => a.hash);
   const failAfter = process.env.SKILLADOPT_TEST_FAIL_AFTER as "staged" | "swapped" | "records" | "kill-after-staged" | undefined; // test hook
   const result = applyFiles(job, files, { force: opts.force, private: opts.private || !licenseAllowsCommit(job), failAfter });
   job.state = "applied";
@@ -419,7 +423,7 @@ async function cmdImpact(opts: Opts, root: string): Promise<number> {
 }
 
 function needsAttention(r: SkillImpact): boolean {
-  return r.stale.length > 0 || r.localEdits.length > 0 || !!r.upstream || !!r.missingRecord;
+  return r.stale.length > 0 || r.localEdits.length > 0 || !!r.upstream || !!r.missingRecord || !!r.newRules?.length;
 }
 
 function printImpact(r: SkillImpact, checkedUpstream: boolean): void {
@@ -429,6 +433,10 @@ function printImpact(r: SkillImpact, checkedUpstream: boolean): void {
   log(`${c.bold(r.name)}  ${head}${r.stale.length ? c.dim(` · ${holds} unaffected`) : ""}`);
   for (const s of r.stale) log(`  ${c.yellow("↻")} ${s.where.padEnd(4)} ${s.action.padEnd(7)} ${c.dim(s.reason.padEnd(24))} ${safePrint(s.why)}`);
   if (r.localEdits.length) log(`  ${c.magenta("✎")} edited by hand: ${r.localEdits.join(", ")}`);
+  if (r.newRules?.length) {
+    log(`  ${c.yellow("✚")} ${r.newRules.length} instruction line(s) added or changed since adoption; kept paragraphs were not checked against them:`);
+    for (const rule of r.newRules.slice(0, 5)) log(`      ${safePrint(rule)}`);
+  }
   if (r.missingRecord) log(`  ${c.red("?")} decision record missing (.skilladopt/decisions/${r.name}.json)`);
   if (r.upstream && "error" in r.upstream) log(`  ${c.red("!")} upstream check failed: ${safePrint(r.upstream.error)}`);
   else if (r.upstream) {

@@ -1,25 +1,68 @@
-<div align="center">
+<p align="center">
+  <img src="assets/banner-ko.png" alt="skilladopt: AI 스킬, 그대로 설치하지 말고 입양하세요" width="100%">
+</p>
 
-# skilladopt
+<p align="center">
+  <a href="README.md"><b>English</b></a> · <b>한국어</b>
+</p>
 
-**AI 스킬, 그대로 설치하지 말고 입양하세요.**
+<h2 align="center">AI 스킬, 그대로 설치하지 말고 입양하세요.</h2>
 
-[![npm](https://img.shields.io/npm/v/skilladopt?color=7ee2a8)](https://www.npmjs.com/package/skilladopt)
-[![ci](https://github.com/kks0488/skilladopt/actions/workflows/ci.yml/badge.svg)](https://github.com/kks0488/skilladopt/actions/workflows/ci.yml)
-[![license](https://img.shields.io/badge/license-MIT-b9a2f0)](LICENSE)
-[![X](https://img.shields.io/badge/follow-@kks0488-000?logo=x)](https://x.com/kks0488)
+<p align="center">
+  남이 만든 Claude Code·Codex 스킬을 넣기 전에 내 프로젝트에 맞게 고치고,<br>
+  바꾼 줄마다 근거를 남기고, 나중에 다시 볼 곳만 알려 줍니다.
+</p>
 
-[English](README.md) · [한국어](README.ko.md)
+<p align="center">
+  <a href="https://www.npmjs.com/package/skilladopt"><img src="https://img.shields.io/npm/v/skilladopt?color=7ee2a8" alt="npm"></a>
+  <a href="https://github.com/kks0488/skilladopt/actions/workflows/ci.yml"><img src="https://github.com/kks0488/skilladopt/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b9a2f0" alt="라이선스: MIT"></a>
+  <a href="https://github.com/kks0488/skilladopt/stargazers"><img src="https://img.shields.io/github/stars/kks0488/skilladopt?style=flat&color=e3b341" alt="stars"></a>
+  <img src="https://img.shields.io/github/languages/top/kks0488/skilladopt?color=3178c6" alt="top language">
+  <a href="https://github.com/kks0488/skilladopt/commits/main"><img src="https://img.shields.io/github/last-commit/kks0488/skilladopt?color=79c0ff" alt="last commit"></a>
+  <a href="https://x.com/kks0488"><img src="https://img.shields.io/badge/follow-@kks0488-000?logo=x" alt="X: @kks0488"></a>
+</p>
 
-![skilladopt가 하는 일 (20초)](assets/explainer.gif)
-
-</div>
+<p align="center">
+  <img src="assets/explainer.gif" alt="skilladopt가 하는 일 (20초)" width="100%">
+</p>
 
 GitHub에서 가져온 Claude Code·Codex용 스킬은 모두 다른 사람의 프로젝트를 기준으로 쓰여 있습니다.
 그 사람의 도구를 쓰고, 그 사람의 명령을 돌리고, 그 사람의 규칙을 따르라고 하죠.
 
 skilladopt는 스킬을 넣기 전에 내 프로젝트에 맞게 고치고, 줄마다 왜 바꿨는지 적어 두었다가,
 프로젝트가 바뀌면 다시 볼 줄만 알려 줍니다.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 내 프로젝트에 맞게 고침
+일반 명령은 내 명령으로 바꾸고, 쓰지 않는 도구에 대한 조언은 빼고, 내 `AGENTS.md` 규칙을 지킵니다.
+
+</td>
+<td width="50%" valign="top">
+
+### 줄마다 근거를 남김
+문단마다 판단(keep, bind, rewrite, drop, review)이 하나씩 붙고, 기댄 의존성·스크립트·규칙과 함께 저장됩니다.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 다시 볼 곳만 알려 줌
+`skilladopt impact`는 근거가 바뀐 판단과 입양 뒤 새로 생긴 규칙을 짚어 줍니다. `update`는 여전히 맞는 판단을 재사용합니다.
+
+</td>
+<td width="50%" valign="top">
+
+### 스킬 안의 것을 실행하지 않음
+GitHub API로 고정된 커밋의 파일만 읽습니다. AI 작업자는 도구 없이 또는 읽기 전용 샌드박스에서 돌고, 설치가 실패하면 원래대로 돌아갑니다.
+
+</td>
+</tr>
+</table>
 
 ## 시작하기
 
@@ -137,3 +180,18 @@ npx skilladopt impact
 ## 선행 사례
 
 스킬을 프롬프트로 맞추는 일은 전에도 있었습니다. [makerskills](https://github.com/coreyhaines31/makerskills)의 `/skillify`, skillsmith의 `upstream-review`가 있고, [rulesync](https://github.com/dyoshikawa/rulesync)와 [agents-lint](https://github.com/giacomo/agents-lint)는 인접한 문제를 다룹니다. skilladopt는 판단마다 근거를 남기고, 변경이 어느 판단을 무효로 만들었는지 알려 줍니다.
+
+## 자주 묻는 질문
+
+**스킬 안의 무언가를 실행하나요?**
+아니요. 고정된 커밋의 파일을 읽기만 하고, 스크립트가 필요한 스킬은 AI가 보기 전에 거부합니다.
+
+**Claude Code와 Codex가 둘 다 있어야 하나요?**
+아니요. 둘 중 하나면 됩니다(스킬을 읽는 역할). Node 20 이상도 필요합니다.
+
+**프로젝트와 맞지 않는 스킬이면요?**
+거절하고 아무것도 설치하지 않습니다. AI가 확신하지 못한 항목은 설치 전에 보여 줍니다.
+
+## 라이선스
+
+[MIT](LICENSE)

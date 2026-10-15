@@ -1,25 +1,68 @@
-<div align="center">
+<p align="center">
+  <img src="assets/banner.png" alt="skilladopt: don't install agent skills, adopt them" width="100%">
+</p>
 
-# skilladopt
+<p align="center">
+  <b>English</b> · <a href="README.ko.md"><b>한국어</b></a>
+</p>
 
-**Don't install agent skills. Adopt them.**
+<h2 align="center">Don't install agent skills. Adopt them.</h2>
 
-[![npm](https://img.shields.io/npm/v/skilladopt?color=7ee2a8)](https://www.npmjs.com/package/skilladopt)
-[![ci](https://github.com/kks0488/skilladopt/actions/workflows/ci.yml/badge.svg)](https://github.com/kks0488/skilladopt/actions/workflows/ci.yml)
-[![license](https://img.shields.io/badge/license-MIT-b9a2f0)](LICENSE)
-[![X](https://img.shields.io/badge/follow-@kks0488-000?logo=x)](https://x.com/kks0488)
+<p align="center">
+  Fit a third-party Claude Code or Codex skill to your project before it goes in,<br>
+  keep the evidence for every change, and know exactly what to re-check later.
+</p>
 
-[English](README.md) · [한국어](README.ko.md)
+<p align="center">
+  <a href="https://www.npmjs.com/package/skilladopt"><img src="https://img.shields.io/npm/v/skilladopt?color=7ee2a8" alt="npm"></a>
+  <a href="https://github.com/kks0488/skilladopt/actions/workflows/ci.yml"><img src="https://github.com/kks0488/skilladopt/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b9a2f0" alt="license: MIT"></a>
+  <a href="https://github.com/kks0488/skilladopt/stargazers"><img src="https://img.shields.io/github/stars/kks0488/skilladopt?style=flat&color=e3b341" alt="stars"></a>
+  <img src="https://img.shields.io/github/languages/top/kks0488/skilladopt?color=3178c6" alt="top language">
+  <a href="https://github.com/kks0488/skilladopt/commits/main"><img src="https://img.shields.io/github/last-commit/kks0488/skilladopt?color=79c0ff" alt="last commit"></a>
+  <a href="https://x.com/kks0488"><img src="https://img.shields.io/badge/follow-@kks0488-000?logo=x" alt="X: @kks0488"></a>
+</p>
 
-![What skilladopt does, in 20 seconds](assets/explainer.gif)
-
-</div>
+<p align="center">
+  <img src="assets/explainer.gif" alt="What skilladopt does, in 20 seconds" width="100%">
+</p>
 
 Every skill you copy from GitHub for Claude Code or Codex was written for someone else's project.
 It tells your agent to use their tools, run their commands and follow their rules.
 
 skilladopt fits the skill to your project before it goes in, writes down why each line changed,
 and tells you which lines to look at again when your project changes.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### Fits the skill to your project
+Generic commands become your commands, advice for tools you don't use is removed, and your `AGENTS.md` rules are respected.
+
+</td>
+<td width="50%" valign="top">
+
+### Keeps evidence for every line
+Each paragraph gets one decision (keep, bind, rewrite, drop or review), saved with the dependency, script or rule it relied on.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### Tells you what to re-check
+`skilladopt impact` points at the decisions whose evidence changed and the rules added since adoption. `update` reuses the decisions that still hold.
+
+</td>
+<td width="50%" valign="top">
+
+### Runs nothing from the skill
+Skills are read through the GitHub API at a pinned commit. The AI worker gets no tools or a read-only sandbox, and a failed install rolls back.
+
+</td>
+</tr>
+</table>
 
 ## Quick start
 
@@ -137,3 +180,18 @@ Paragraphs that carry a duty (a prohibition, an approval, a verification step) a
 ## Prior art
 
 Tailoring skills with a prompt has been done before: `/skillify` in [makerskills](https://github.com/coreyhaines31/makerskills) and skillsmith's `upstream-review`. [rulesync](https://github.com/dyoshikawa/rulesync) and [agents-lint](https://github.com/giacomo/agents-lint) work on neighbouring problems. skilladopt adds evidence for every decision and tells you which ones a change has invalidated.
+
+## FAQ
+
+**Does it run anything from the skill?**
+No. Files are read at a pinned commit, and skills that need scripts are refused before any AI sees them.
+
+**Do I need both Claude Code and Codex?**
+No. One of them is enough; it does the reading. You also need Node 20 or newer.
+
+**What if a skill doesn't fit my project?**
+It is turned down and nothing is installed. Items the AI isn't sure about are shown to you before install.
+
+## License
+
+[MIT](LICENSE)

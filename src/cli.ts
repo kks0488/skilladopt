@@ -43,7 +43,8 @@ Options
   --force                        Overwrite unmanaged or hand-edited skill folders
   --private                      Allow skills without a recognised permissive license: installs and records
                                  are added to .git/info/exclude (refused if git already tracks them)
-  --json                         Machine-readable output (impact, status)
+  --dry-run                      Evaluate add without installing or writing to the project
+  --json                         Machine-readable output (dry-run, impact, status)
   --cwd <dir>                    Project directory (default: current git root)
 
 <job> is a job id, a prefix of it, or "last".`;
@@ -60,13 +61,14 @@ interface Opts {
   force: boolean;
   private: boolean;
   json: boolean;
+  dryRun: boolean;
   upstream: boolean;
   cwd?: string;
   ref?: string;
 }
 
 function parseArgs(argv: string[]): Opts {
-  const o: Opts = { _: [], decide: [], yes: false, force: false, private: false, json: false, upstream: false };
+  const o: Opts = { _: [], decide: [], yes: false, force: false, private: false, json: false, dryRun: false, upstream: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     const val = () => {
@@ -87,6 +89,7 @@ function parseArgs(argv: string[]): Opts {
       case "--force": o.force = true; break;
       case "--private": o.private = true; break;
       case "--json": o.json = true; break;
+      case "--dry-run": o.dryRun = true; break;
       case "--upstream": o.upstream = true; break;
       default:
         if (a.startsWith("-")) throw new UserError(`Unknown option ${a}`);
@@ -206,9 +209,10 @@ async function decideWith(job: Job, project: Project, opts: Opts, carriedSummary
     return;
   }
   const how = opts.decisions ? "decisions read from file" : kind === "claude" ? "claude --safe-mode, no tools" : kind === "codex" ? "codex read-only sandbox, no network tool access, no home dir" : "manual";
-  log(c.dim(`worker   ${job.worker} · ${how} · gets the skill text + a project summary · ${job.open.length} block(s) to decide`));
-  const raw: RawDecisions | null = opts.decisions ? readJson<RawDecisions>(resolve(opts.decisions)) : await runWorker(kind, job, brief, opts.model);
+  if (!opts.dryRun) log(c.dim(`worker   ${job.worker} \u00b7 ${how} \u00b7 gets the skill text + a project summary \u00b7 ${job.open.length} block(s) to decide`));
+  const raw: RawDecisions | null = opts.decisions ? readJson<RawDecisions>(resolve(opts.decisions)) : await runWorker(kind, job, brief, opts.model, opts.dryRun);
   if (!raw) {
+    if (opts.dryRun) throw new UserError("--dry-run needs a codex or claude worker, or --decisions");
     job.state = "brief";
     saveJob(job);
     log();
@@ -346,6 +350,7 @@ function sealIfReady(job: Job): void {
 async function cmdAdd(opts: Opts, root: string): Promise<number> {
   const spec = opts._[1];
   if (!spec) throw new UserError("Usage: skilladopt add <github-repo-or-url> [skill-name]");
+  if (opts.dryRun) return cmdPreview(opts, root, spec);
   const project = readProject(root);
   const src = await fetchSource(spec, undefined, opts._[2]);
   const { blocks, problems, warnings } = inspect(src);
@@ -360,6 +365,59 @@ async function cmdAdd(opts: Opts, root: string): Promise<number> {
   await decideWith(job, project, opts, []);
   if (job.state === "brief") return 0;
   return finish(job, opts, root);
+}
+
+/** Preview jobs stay in memory and can never reach finish, saveJob or apply. */
+async function cmdPreview(opts: Opts, root: string, spec: string): Promise<number> {
+  let job: Job | undefined;
+  const id = randomId();
+  const reasons: string[] = [];
+  try {
+    const project = readProject(root);
+    const src = await fetchSource(spec, undefined, opts._[2]);
+    const { blocks, problems, warnings } = inspect(src);
+    job = newJob(root, project, src, blocks, "", opts.target ?? "both");
+    job.id = id;
+    job.warnings = warnings;
+    if (problems.length) {
+      job.verdict = "reject";
+      job.state = "rejected";
+      reasons.push(...problems);
+    } else {
+      await decideWith(job, project, opts, []);
+      if (job.state === "rejected") reasons.push(job.summary || "Worker rejected this skill");
+      if (job.state === "invalid") reasons.push(...job.errors);
+    }
+  } catch (e) {
+    reasons.push(job ? "Worker evaluation failed; check worker configuration" : e instanceof UserError ? e.message : "Preview evaluation failed");
+    if (job) job.state = "invalid";
+  }
+  const counts = { keep: 0, drop: 0, accept: 0, "needs-review": 0 };
+  for (const d of job?.decisions ?? []) {
+    const key = d.action === "review" ? "needs-review" : d.action === "bind" || d.action === "rewrite" ? "accept" : d.action;
+    counts[key]++;
+  }
+  for (const a of job?.additions ?? []) counts[a.status === "review" ? "needs-review" : a.status === "dropped" ? "drop" : "accept"]++;
+  if (job?.behavior?.decision === "pending") counts["needs-review"]++;
+  const changes = (job?.decisions ?? []).filter((d) => d.action !== "keep").map((d) => {
+    const b = job!.blocks.find((b) => b.id === d.blockId)!;
+    return { block: b.id, file: b.file, action: d.action, before: oneLine(b.text, 160),
+      after: oneLine(d.text || d.proposed?.text || "", 160), reason: oneLine(d.flags[0] || d.note || d.reason, 160) };
+  });
+  for (const a of job?.additions ?? []) changes.push({ block: a.id, file: "", action: a.status === "review" ? "review" : a.status === "dropped" ? "drop" : "rewrite",
+    before: "", after: oneLine(a.text, 160), reason: oneLine(a.flags[0] || a.note, 160) });
+  const verdict = !job || job.state === "invalid" ? "invalid" : job.state === "needs-review" ? "needs-review" : job.verdict;
+  const result = { source: job?.source.id || spec, commit: job?.source.commit ?? null,
+    license: job?.license?.spdx ?? null, verdict, counts, changes: changes.slice(0, 5),
+    rejectionReasons: reasons, jobId: id };
+  if (opts.json) log(JSON.stringify(result));
+  else {
+    log(`Dry run: ${safePrint(result.source)} (${result.verdict}). Nothing installed; job ${id} is not saved.`);
+    log(`Counts: ${JSON.stringify(counts)}`);
+    for (const change of result.changes) log(`  ${change.block}: ${change.action} ${change.before} -> ${change.after}`);
+    for (const reason of reasons) log(`  ${safePrint(reason)}`);
+  }
+  return verdict === "invalid" ? 2 : verdict === "reject" || verdict === "needs-review" || verdict === "no-op" ? 1 : 0;
 }
 
 async function cmdUpdate(opts: Opts, root: string): Promise<number> {
@@ -649,6 +707,9 @@ async function main(argv: string[]): Promise<number> {
   if (argv[0] === "version" || argv.includes("--version") || argv.includes("-v")) { log(VERSION); return 0; }
   const opts = parseArgs(argv);
   const cmd = opts._[0];
+  if (opts.dryRun && ["setup", "doctor", "recover", "update", "review", "apply", "impact", "check", "status", "ls"].includes(cmd ?? "")) {
+    throw new UserError("--dry-run is only supported for add");
+  }
   if (cmd === "setup") return cmdSetup(opts);
   const root = findRoot(opts.cwd ?? process.cwd());
   if (cmd === "doctor") {
@@ -668,7 +729,7 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
   const pending = pendingJournal(root);
-  if (pending && cmd !== "apply") log(c.yellow(`note: an earlier apply was interrupted (${pending}). Run \`skilladopt recover\` to roll it back.`));
+  if (pending && cmd !== "apply" && !opts.dryRun) log(c.yellow(`note: an earlier apply was interrupted (${pending}). Run \`skilladopt recover\` to roll it back.`));
   const COMMANDS = ["add", "update", "review", "apply", "impact", "check", "status", "ls"];
   if (!COMMANDS.includes(cmd ?? "")) opts._.unshift("add"); // `skilladopt owner/repo skill` is the same as `skilladopt add owner/repo skill`
   switch (opts._[0]) {

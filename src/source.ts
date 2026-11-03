@@ -121,7 +121,8 @@ export async function fetchGithub(src: Extract<SourceSpec, { type: "github" }>):
     kind: e.mode === "120000" ? "symlink" : e.type === "commit" || e.mode === "160000" ? "submodule" : e.type === "blob" ? "blob" : "other",
   }));
   const findings = checkEntries(entries);
-  if (findings.some((f) => f.level === "reject")) return reject(findings, { type: "github", id: "" });
+  if (findings.some((f) => f.level === "reject")) return reject(findings, { type: "github", id: `github:${src.owner}/${src.repo}${base ? `/${base}` : ""}`,
+    owner: src.owner, repo: src.repo, path: base, ref, commit });
 
   const files: FetchedSource["files"] = [];
   const excluded: string[] = [];

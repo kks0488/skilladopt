@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, realpathSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { join, sep } from "node:path";
+import { tmpdir } from "node:os";
 import { describeProject, type Project } from "./facts.js";
 import { jobDir, REASONS, type Job } from "./job.js";
 import { UserError, c, cacheHome, randomId } from "./util.js";
@@ -150,7 +151,20 @@ function tomlString(s: string): string {
 }
 
 /** Run the worker in isolation. The worker never gets file or network access to the project. */
-export async function runWorker(kind: WorkerKind, job: Job, brief: string, model?: string): Promise<RawDecisions | null> {
+export async function runWorker(kind: WorkerKind, job: Job, brief: string, model?: string, dryRun = false): Promise<RawDecisions | null> {
+  if (dryRun) {
+    if (kind === "manual") return null;
+    // TMPDIR may point into the project. Choose an external directory before writing anything.
+    const root = realpathSync(job.root);
+    const base = [tmpdir(), "/tmp", "/var/tmp"].map((path) => {
+      try { return realpathSync(path); } catch { return ""; }
+    }).find((path) => path && path !== root && !path.startsWith(root.endsWith(sep) ? root : root + sep));
+    if (!base) throw new UserError("No temporary directory outside the project is available");
+    const temporary = mkdtempSync(join(base, "skilladopt-preview-"));
+    try {
+      return await runIsolated(kind, temporary, brief, DECISION_SCHEMA, model, "reading the skill") as RawDecisions;
+    } finally { rmSync(temporary, { recursive: true, force: true }); }
+  }
   const dir = jobDir(job.id);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "brief.md"), brief);

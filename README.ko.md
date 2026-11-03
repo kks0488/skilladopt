@@ -119,6 +119,7 @@ npx skilladopt impact
 |---|---|
 | `skilladopt setup` | Claude Code·Codex가 스킬을 입양하도록 설정. 이후엔 말로 요청 |
 | `skilladopt <저장소> [스킬]` | 스킬을 이 프로젝트에 맞추고 설치 |
+| `skilladopt <저장소> [스킬] --dry-run --json` | 설치하거나 프로젝트에 쓰지 않고 판단을 JSON으로 미리 보기 |
 | `skilladopt impact` | 프로젝트 변경이 영향을 준 판단 보기(`--upstream`은 원본 스킬 변경도 확인) |
 | `skilladopt update <이름>` | 원본 최신판에 다시 맞춤. 여전히 맞는 판단은 재사용 |
 | `skilladopt status` | 입양한 스킬과 손으로 고친 흔적 |

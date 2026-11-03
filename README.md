@@ -119,6 +119,7 @@ It points at the one decision out of 25 that lost its evidence and the new rule 
 |---|---|
 | `skilladopt setup` | Teach Claude Code and Codex to adopt skills, so you can just ask |
 | `skilladopt <repo> [skill]` | Fit a skill to this project and install it |
+| `skilladopt <repo> [skill] --dry-run --json` | Preview decisions as JSON without installing or writing to this project |
 | `skilladopt impact` | Show which decisions your project changes affect (`--upstream` also checks the original skill) |
 | `skilladopt update <name>` | Re-fit to the latest version of the original, reusing decisions that still hold |
 | `skilladopt status` | List adopted skills and any hand edits |
